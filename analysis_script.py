@@ -14,6 +14,9 @@ import math
 from wordcloud import WordCloud
 from nltk.corpus import stopwords
 from collections import defaultdict
+from nltk.stem import WordNetLemmatizer
+import string
+
 
 class excel_analyser:
     def __init__(self, file_name, sheet_name):
@@ -70,8 +73,9 @@ class excel_analyser:
         for w in updated_list:
             dict_of_words[w] += 1     
             
-            
-            
+        # first let's get rid of non-ascii content
+        self._eliminate_non_ascii(dict_of_words)
+        
         if wordcloud:
             updated_list_as_string = " ".join(updated_list) # need to turn list of words into a string for WordCloud
 
@@ -88,5 +92,16 @@ class excel_analyser:
         
         return dict_of_words
     
+    def _eliminate_non_ascii(self, dictionary):
+        keys_to_be_deleted = [] # can't delete keys from dictionary in for loop as dictionary size changing
+        for key in dictionary.keys():
+            if not key.isascii():
+                keys_to_be_deleted.append(key)
+        for key in keys_to_be_deleted:
+            del dictionary[key]
+    
+    def _lemmatise(self):
+      pass  
+        
 x = excel_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
 x.hashtag_freq(list_of_hashtag_variations=["Brexit ", "brexit ", "BREXIT ", " Brexit", " brexit", " BREXIT", "Brexit", "brexit", "BREXIT"])["clottedcreampalm"]
