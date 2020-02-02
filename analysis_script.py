@@ -17,6 +17,7 @@ from collections import defaultdict
 from nltk.stem import WordNetLemmatizer
 import string
 
+dict_of_hashtags = {"eu": ["europeanunion"], "euref": ["eureferendum", "eurefresults", "eurefresult"], "ukref": ["ukreferendum", "ukeureferendum"], "ukexit": ["ukexitseu"]}
 
 class excel_analyser:
     def __init__(self, file_name, sheet_name):
@@ -99,9 +100,32 @@ class excel_analyser:
                 keys_to_be_deleted.append(key)
         for key in keys_to_be_deleted:
             del dictionary[key]
+            
+    def eliminate_one_off_hashtags(self, dictionary):
+        for key in list(dictionary):
+            if dictionary[key] == 1:
+                del dictionary[key]
     
-    def _lemmatise(self):
-      pass  
+    def _stem(self, dictionary):
+        dictionary_with_identical_starts = {} 
+        for i in dictionary:
+            dictionary_with_identical_starts[i] = []
+            for j in dictionary:
+                if i != j and i.startswith(j):
+                    dictionary_with_identical_starts[i].append(j)
+        # now get rid of empty dictionaries
+        identical_keys = []
+        corresponding_identical_words = []
+        
+        for i in dictionary_with_identical_starts.keys():
+            if len(dictionary_with_identical_starts[i]) != 0:
+                identical_keys.append(i)
+                corresponding_identical_words.append(dictionary_with_identical_starts[i])
+                
+        
+                
+            
+        
         
 x = excel_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
-x.hashtag_freq(list_of_hashtag_variations=["Brexit ", "brexit ", "BREXIT ", " Brexit", " brexit", " BREXIT", "Brexit", "brexit", "BREXIT"])["clottedcreampalm"]
+dictionary = x.hashtag_freq(list_of_hashtag_variations=["Brexit ", "brexit ", "BREXIT ", " Brexit", " brexit", " BREXIT", "Brexit", "brexit", "BREXIT"])
