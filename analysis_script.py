@@ -14,6 +14,10 @@ import math
 from wordcloud import WordCloud
 from nltk.corpus import stopwords
 from collections import defaultdict
+from nltk.stem import WordNetLemmatizer
+import string
+
+dict_of_hashtags = {"eu": ["europeanunion"], "euref": ["eureferendum", "eurefresults", "eurefresult"], "ukref": ["ukreferendum", "ukeureferendum"], "ukexit": ["ukexitseu"]}
 
 class excel_analyser:
     def __init__(self, file_name, sheet_name):
@@ -43,12 +47,16 @@ class excel_analyser:
         
         return number_of_tweets, number_of_retweets
     
-    def hashtag_freq(self, list_of_hashtag_variations, wordcloud = False, save = False):
+    def hashtag_freq(self, list_of_hashtag_variations, ignore = None, wordcloud = False, save = False):
         """
         We want to account for the fact that a single word may be represented in multiple ways in a hashtag. For example, the hashtag for "Brexit"
         might be in any one of these forms: ["Brexit ", "brexit ", "BREXIT ", " Brexit", " brexit", " BREXIT", "Brexit", "brexit", "BREXIT"]. Notice that 
         the spaces might be an issue here. We also want to make sure we don't accidentally get rid of a hashtag like "#stopbrexit" or "#yaytobrexit" just 
         because it has the word Brexit in it. Let me know if you guys have any ideas as to how to deal with this. 
+        
+        
+        Ignore is a list of hashtags that you do not want to include in your word cloud. For example, it might be that one hashtag it so common it eclipses all the other ones and so the word cloud only shows 1 word.
+        
         """
         
         list_of_words = []
@@ -59,25 +67,38 @@ class excel_analyser:
                         i = i.replace(j, "") # if a tweet has more than one hashtag, we want to get rid of the one that we already have, i.e.: Brexit --> we want to see what other hashtags use GIVEN that someone tweets #Brexit
                 list_of_words.append(i)
 
-        updated_list = []        
+        self.updated_list = []        
         for num, i in enumerate(list_of_words):
             if i: # empty string same as False
                 i = i.strip() # get rid of white space
                 for j in i.split():
-                    updated_list.append(j.lower())
+                    self.updated_list.append(j.lower())
         
-        dict_of_words= defaultdict( int )
-        for w in updated_list:
-            dict_of_words[w] += 1     
+        self.dict_of_words= defaultdict( int )
+        for w in self.updated_list:
+            self.dict_of_words[w] += 1     
             
-            
-            
+        # first let's get rid of non-ascii content
+        self._eliminate_non_ascii(self.dict_of_words)
+        self._eliminate_one_off_hashtags(self.dict_of_words)
+        self._combine_hashtags_that_are_the_same(self.dict_of_words, dict_of_hashtags)
+        
         if wordcloud:
-            updated_list_as_string = " ".join(updated_list) # need to turn list of words into a string for WordCloud
-
+           # updated_list_as_string = " ".join(list(dict_of_words.keys())) # need to turn list of words into a string for WordCloud
+            #updated_list_as_string = " ".join(self.updated_list) 
+            updated_list_as_string = ""
+            if ignore != None:
+                for word in ignore:
+                    del self.dict_of_words[word]
+            for word in self.dict_of_words.keys():
+                for i in range(self.dict_of_words[word]):
+                    updated_list_as_string = updated_list_as_string + " " + word
+            
+            updated_list_as_string = updated_list_as_string.lstrip() # removing the extra blank space at the beginning
+            
             wordcloud = WordCloud(
-                      relative_scaling = 1.0,
-                      stopwords = set(stopwords.words("english")) # set or space-separated string
+                      relative_scaling = 0.5,
+                      stopwords = set(stopwords.words("english")), collocations = False # set or space-separated string
                       ).generate(updated_list_as_string)
             fig=plt.figure(figsize=(12, 10), facecolor='w', edgecolor='k')
             plt.imshow(wordcloud)
@@ -85,8 +106,67 @@ class excel_analyser:
             if save:
                 plt.savefig("wordcloud")
             plt.show()
+        return self.dict_of_words
+            
+    def _eliminate_non_ascii(self, dictionary):
+        """
+        Eliminates all hashtags that are no ascii.
+        """
+        keys_to_be_deleted = [] # can't delete keys from dictionary in for loop as dictionary size changing
+        for key in dictionary.keys():
+            if not key.isascii():
+                keys_to_be_deleted.append(key)
+        for key in keys_to_be_deleted:
+            del dictionary[key]
+            
+    def _eliminate_one_off_hashtags(self, dictionary):
+        """
+        Eliminates hashtags that occur fewer than five times
+        """
+        for key in list(dictionary):
+            if dictionary[key] <= 5:
+                del dictionary[key]
+                
+    def _combine_hashtags_that_are_the_same(self, dictionary, hashtag_dict):
+        """
+        Combines hashtags that are basically the same.
+        Need to provide a dictionary that tells you which hashtags are the same, i.e.: {euref: [eureferendum, "eurefer"]}
+        """
         
-        return dict_of_words
-    
+        hashtags_to_be_deleted = []
+        
+        for dups in hashtag_dict.values():
+            hashtags_to_be_deleted = hashtags_to_be_deleted + dups
+        
+        for hashtag in hashtag_dict.keys():
+            corresponding_equivalent_hashtags = hashtag_dict[hashtag]
+            for i in corresponding_equivalent_hashtags:
+                dictionary[hashtag] += dictionary[i]
+        
+        for i in hashtags_to_be_deleted:
+            del dictionary[i]
+            
+        return dictionary 
+            
+    def _stem(self, dictionary):
+        """
+        Still need to figure out how to do this properly!
+        
+        """
+        dictionary_with_identical_starts = {} 
+        for i in dictionary:
+            dictionary_with_identical_starts[i] = []
+            for j in dictionary:
+                if i != j and i.startswith(j):
+                    dictionary_with_identical_starts[i].append(j)
+        # now get rid of empty dictionaries
+        identical_keys = []
+        corresponding_identical_words = []
+        
+        for i in dictionary_with_identical_starts.keys():
+            if len(dictionary_with_identical_starts[i]) != 0:
+                identical_keys.append(i)
+                corresponding_identical_words.append(dictionary_with_identical_starts[i])
+        
 x = excel_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
-x.hashtag_freq(list_of_hashtag_variations=["Brexit ", "brexit ", "BREXIT ", " Brexit", " brexit", " BREXIT", "Brexit", "brexit", "BREXIT"])["clottedcreampalm"]
+x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
