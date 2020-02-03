@@ -15,8 +15,8 @@ do
   echo ""
   echo "python scrape.py -t" ${array[$i]} "-f scrape_data/${array[$i]}.csv -c config.yaml" 
   python scrape.py -t ${array[$i]} -f scrape_data/${array[$i]}.csv -c config.yaml
-  echo "python scrape.py -t" ${array[$i]} "-f 31_Jan_2020_scrape_data/${array[$i]}.csv -c config.yaml" 
-  python 31_Jan_2020_scrape.py -t ${array[$i]} -f 31_Jan_2020_scrape_data/${array[$i]}.csv -c config.yaml
+  #echo "python scrape.py -t" ${array[$i]} "-f 31_Jan_2020_scrape_data/${array[$i]}.csv -c config.yaml" 
+  #python 31_Jan_2020_scrape.py -t ${array[$i]} -f 31_Jan_2020_scrape_data/${array[$i]}.csv -c config.yaml
   echo "---------------------------------------------"
   echo "scrape ${i+1} / ${arraylength} complete"
   echo "---------------------------------------------"

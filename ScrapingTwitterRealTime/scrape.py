@@ -41,10 +41,11 @@ api = tweepy.API(auth,wait_on_rate_limit=True)
 csvFile = open(filename, 'a')
 csvWriter = csv.writer(csvFile)
 
-endTime = datetime.datetime.now() + datetime.timedelta(minutes=15)
+endTime = datetime.datetime.now() + datetime.timedelta(minutes=20)
 for i, tweet in enumerate(tweepy.Cursor(api.search,q=hashtag,count=100,
                            lang="en",
-                           since="2020-01-01").items()):
+                           since="2020-01-30",
+                           until="2020-01-31").items()):
     csvWriter.writerow([tweet.created_at, tweet.text.encode('utf-8')])
     if i % 1000 == 0:
         print("Tweet " + str(i) + " created at: " + str(tweet.created_at) + " saved")
