@@ -15,8 +15,11 @@ from wordcloud import WordCloud
 from nltk.corpus import stopwords
 from collections import defaultdict
 from nltk.stem import WordNetLemmatizer
+import nltk
 import string
 import botometer
+import re
+import progressbar
 
 
 dict_of_hashtags = {"eu": ["europeanunion"], "euref": ["eureferendum", "eurefresults", "eurefresult"], "ukref": ["ukreferendum", "ukeureferendum"], "ukexit": ["ukexitseu"]}
@@ -25,12 +28,12 @@ class excel_analyser:
     def __init__(self, file_name, sheet_name):
         self.file_name = file_name
         self.sheet_name = sheet_name
-        self.excel_df = pd.read_excel(io=self.file_name, sheet_name=self.sheet_name)
+        self.df = pd.read_excel(io=self.file_name, sheet_name=self.sheet_name)
         
     def follower_friend_ratio(self, plot = False):
         
-        self.excel_df["Follower-friend ratio"] = self.excel_df["Number of Followers"]/self.excel_df["Number Following"]
-        excel_np_ffr = self.excel_df["Follower-friend ratio"].to_numpy()
+        self.df["Follower-friend ratio"] = self.df["Number of Followers"]/self.df["Number Following"]
+        excel_np_ffr = self.df["Follower-friend ratio"].to_numpy()
         
         if plot:
             plt.hist(excel_np_ffr[np.isfinite(excel_np_ffr)],  bins= 1000) #getting rid of any values that are NaN
@@ -44,8 +47,8 @@ class excel_analyser:
         return excel_np_ffr
     
     def tweet_stats(self):
-        number_of_tweets = str((self.excel_df["Tweet Type"].to_numpy() == "Tweet").sum())
-        number_of_retweets = str((self.excel_df["Tweet Type"].to_numpy() == "Retweet").sum())
+        number_of_tweets = str((self.df["Tweet Type"].to_numpy() == "Tweet").sum())
+        number_of_retweets = str((self.df["Tweet Type"].to_numpy() == "Retweet").sum())
         
         return number_of_tweets, number_of_retweets
     
@@ -62,7 +65,7 @@ class excel_analyser:
         """
         
         list_of_words = []
-        for i in self.excel_df["Hashtags"]:
+        for i in self.df["Hashtags"]:
             if type(i) == str:
                 for j in list_of_hashtag_variations:
                     if j in i:
@@ -169,7 +172,33 @@ class excel_analyser:
             if len(dictionary_with_identical_starts[i]) != 0:
                 identical_keys.append(i)
                 corresponding_identical_words.append(dictionary_with_identical_starts[i])
-                
+    
+    
+    def clean_tweet(self, tweet):
+        """
+        Input: tweet (originial)
+        output: tweet without RT tag, username and urls, punctuation
+        """
+
+        # remove url
+        clean_tweet = re.sub(r"http\S+", "", tweet)
+        # remove @username
+        clean_tweet = re.sub(r"@\S+", "", clean_tweet)
+        # remove RT
+        clean_tweet = re.sub(r"RT", "", clean_tweet)
+        # remove punctuation
+        tokens = [word.lower() for sent in nltk.sent_tokenize(clean_tweet) for
+                  word in nltk.word_tokenize(sent)]
+        filtered_tokens = []
+        # filter out any tokens not containing letters (e.g., numeric tokens,
+        # raw punctuation)
+        for token in tokens:
+            if re.search('[a-zA-Z]', token):
+                filtered_tokens.append(token)
+        clean_tweet = ' '.join(filtered_tokens)
+        return clean_tweet.lower()
+
+            
     def BotOrNot(self, username, authentication):
         """
         Input: username = twitter handle
