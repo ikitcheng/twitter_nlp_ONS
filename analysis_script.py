@@ -16,6 +16,8 @@ from nltk.corpus import stopwords
 from collections import defaultdict
 from nltk.stem import WordNetLemmatizer
 import string
+import botometer
+
 
 dict_of_hashtags = {"eu": ["europeanunion"], "euref": ["eureferendum", "eurefresults", "eurefresult"], "ukref": ["ukreferendum", "ukeureferendum"], "ukexit": ["ukexitseu"]}
 
@@ -153,7 +155,7 @@ class excel_analyser:
         Still need to figure out how to do this properly!
         
         """
-        dictionary_with_identical_starts = {} 
+        dictionary_with_identical_starts = {}
         for i in dictionary:
             dictionary_with_identical_starts[i] = []
             for j in dictionary:
@@ -167,6 +169,33 @@ class excel_analyser:
             if len(dictionary_with_identical_starts[i]) != 0:
                 identical_keys.append(i)
                 corresponding_identical_words.append(dictionary_with_identical_starts[i])
+                
+    def BotOrNot(self, username, authentication):
+        """
+        Input: username = twitter handle
+               Authentication = [consumerKey, consumerSecret, 
+                                 accessToken, accessTokenSecret,
+                                 rapidapiKey]
+        Output: 1 = bot, 0 = not bot
+        """
+        
+        twitter_app_auth = {
+            'consumer_key': authentication[0],
+            'consumer_secret': authentication[1],
+            'access_token': authentication[2],
+            'access_token_secret': authentication[3]}
+
+        bom = botometer.Botometer(wait_on_ratelimit=True,
+                                  rapidapi_key=authentication[4],
+                                  **twitter_app_auth)
+
+        result = bom.check_account(username)
+        # if bot score> 0.43: bot = 1 else: 0 threshold setting:
+        # https://www.pewresearch.org/internet/2018/04/09/bots-in-the-twittersphere-methodology/
+        if result['cap']['universal'] > 0.5 or result['scores']['universal'] > 0.43:
+            return 1
+        else:
+            return 0
         
 x = excel_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
 x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
