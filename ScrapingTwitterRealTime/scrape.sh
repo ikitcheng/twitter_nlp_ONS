@@ -17,14 +17,14 @@ hashtaglength=${#hashtags[@]}
 sincelength=${#since[@]}
 
 
-for (( i=0; i<${sincelength}-5; i++ ));
+for (( i=0; i<${sincelength}; i++ ));
 do
 
   dir="${since[$i]}-${until[$i]}"
   mkdir -p scrape_data_${dir}
 
   # use for loop to read all values and indexes
-  for (( j=0; j<${hashtaglength}-17; j++ ));
+  for (( j=0; j<${hashtaglength}; j++ ));
   do
 
     echo '---------------------------------------------'
