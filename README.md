@@ -6,8 +6,10 @@ NLP tools to analyse twitter for different user groups and perform topic modelli
 ## JH:
 - Data preprocessing:
   - cleaning hashtag lists
+  - write script to format csv's that Nisha has generated into format that the preprocessing code can use for wordcloud generation
 - Data analysis: 
   - wordcloud related stuff for hashtags and tweets
+ 
 
 ## NL:
 - Data collection: 
