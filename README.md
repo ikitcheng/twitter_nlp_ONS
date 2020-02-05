@@ -8,7 +8,7 @@ NLP tools to analyse twitter for different user groups and perform topic modelli
   - cleaning hashtag lists
   - write script to format csv's that Nisha has generated into format that the preprocessing code can use for wordcloud generation
 - Data analysis: 
-  - wordcloud related stuff for hashtags and tweets
+  - wordcloud related stuff for hashtags and tweets --> specifically do a wordcloud of the text of the tweets
  
 
 ## NL:
