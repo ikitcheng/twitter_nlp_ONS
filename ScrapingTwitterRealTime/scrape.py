@@ -66,22 +66,51 @@ csvFile = open(filename, append_write)
 csvWriter = csv.writer(csvFile)
 
 
+def on_status(status):
+    tweet = ""
+    
+    if hasattr(status, 'retweeted_status'):
+        try:
+            tweet = status.retweeted_status.extended_tweet["full_text"]
+        except:
+            tweet = status.retweeted_status.text
+    else:
+        try:
+            tweet = status.extended_tweet["full_text"]
+        except AttributeError:
+            tweet = status.text
+    
+    return tweet
+
+
+
 endTime = datetime.datetime.now() + datetime.timedelta(minutes=20)
-for i, tweet in enumerate(tweepy.Cursor(api.search,q=hashtag,count=100,
+for i, tweet in enumerate(tweepy.Cursor(api.search,q=hashtag,count=200,
                            lang="en",
                            since=since,
                            until=until).items()):
 
     tweets_encoded = tweet.text.encode('utf-8')
     tweets_decoded = tweets_encoded.decode('utf-8')
-    csvWriter.writerow([tweet.created_at, tweet.id, tweets_decoded, tweet.entities, tweet.source,
+    csvWriter.writerow([tweet.created_at, tweet.id, tweets_decoded, tweet.entities, 
+                        tweet.source, tweet.user,
                         tweet._json["user"]["id"], tweet._json["user"]["screen_name"], 
-                        tweet._json["user"]["location"], tweet._json["user"]["followers_count"], 
+                        tweet._json["user"]["location"], 
+                        tweet._json["user"]["followers_count"], 
                         tweet._json["user"]["friends_count"],
-                        tweet._json["user"]["verified"], tweet._json["user"]["statuses_count"],
-                        tweet.geo, tweet.coordinates, tweet.place.name if tweet.place else None,
-                        tweet._json["user"]["location"], tweet.retweet_count, tweet.favorite_count, 
-                        tweet.favorited, tweet.retweeted
+                        tweet._json["user"]["created_at"],
+                        tweet._json["user"]["favourites_count"],
+                        tweet._json["user"]["statuses_count"],
+                        tweet._json["user"]["verified"], 
+                        tweet._json["user"]["statuses_count"],
+                        tweet.geo, 
+                        tweet.coordinates if tweet.coordinates else None, 
+                        tweet.place.name if tweet.place else None, 
+                        on_status(tweet),
+                        # tweet._json["retweeted_status"] if tweet._json["retweeted_status"] else None,
+                        tweet.retweet_count, tweet.favorite_count, 
+                        tweet.retweeted,
+                        tweet.favorited if tweet.favorited else None,
                         ])
 
     if i % 1000 == 0:
