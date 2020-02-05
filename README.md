@@ -14,7 +14,7 @@ NLP tools to analyse twitter for different user groups and perform topic modelli
   - Write script to automatically scrape twitter data
   - scrape Twitter data real-time from the past 7 days related to #Brexit
   
-## ML:
+## MC:
 - Data preprocessing:
   - extracting information from json and generate features for user classification. 
   - cleaning tweet text
