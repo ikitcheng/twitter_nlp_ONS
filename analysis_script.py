@@ -14,24 +14,38 @@ import math
 from wordcloud import WordCloud
 from nltk.corpus import stopwords
 from collections import defaultdict
-from nltk.stem import WordNetLemmatizer
-import string
+import ast 
 
-dict_of_hashtags = {"eu": ["europeanunion"], "euref": ["eureferendum", "eurefresults", "eurefresult"], "ukref": ["ukreferendum", "ukeureferendum"], "ukexit": ["ukexitseu"]}
+dict_of_hashtags = {"eu": ["europeanunion"], "euref": ["eureferendum", "eurefresults", "eurefresult"], 
+                    "ukref": ["ukreferendum", "ukeureferendum"], "ukexit": ["ukexitseu"]}
 
-class excel_analyser:
-    def __init__(self, file_name, sheet_name):
+headers_for_basic_files = ["created_at", "id", "text", "entities", "source", 
+                           "user.id", "user.screen_name", "user.location", 
+                           "user.followers_count", "user.friends_count", 
+                           "user.verified", "user.statuses_count", "geo", "coordinates",
+                           "place_name", "user_location2", "retweet_count", 
+                           "tweet_favorite_count", "tweet_favorited", "tweet_retweeted"]
+
+
+
+class data_analyser:
+    def __init__(self, file_name, sheet_name = None):
         self.file_name = file_name
-        self.sheet_name = sheet_name
-        self.excel_df = pd.read_excel(io=self.file_name, sheet_name=self.sheet_name)
-        
+        if self.file_name.endswith(".xlsx"):  
+            self.sheet_name = sheet_name
+            self.df = pd.read_excel(io=self.file_name, sheet_name=self.sheet_name)
+        elif self.file_name.endswith(".csv"):
+            self.df = pd.read_csv(filepath_or_buffer = self.file_name, sep = ",")
+            self.df.columns = headers_for_basic_files # adding headers at the top
+            self.find_all_hashtags_in_tweet() # finds all the hashtags in each tweet and adds a new row
+            
     def follower_friend_ratio(self, plot = False):
         
-        self.excel_df["Follower-friend ratio"] = self.excel_df["Number of Followers"]/self.excel_df["Number Following"]
-        excel_np_ffr = self.excel_df["Follower-friend ratio"].to_numpy()
+        self.df["Follower-friend ratio"] = self.df["Number of Followers"]/self.df["Number Following"]
+        df_np_ffr = self.df["Follower-friend ratio"].to_numpy()
         
         if plot:
-            plt.hist(excel_np_ffr[np.isfinite(excel_np_ffr)],  bins= 1000) #getting rid of any values that are NaN
+            plt.hist(df_np_ffr[np.isfinite(df_np_ffr)],  bins= 1000) #getting rid of any values that are NaN
             plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
             plt.xlabel("Follower-Friend Ratio")
             plt.ylabel("Frequency")
@@ -39,11 +53,11 @@ class excel_analyser:
             plt.xscale('log')
             plt.yscale('log')
     
-        return excel_np_ffr
+        return df_np_ffr
     
     def tweet_stats(self):
-        number_of_tweets = str((self.excel_df["Tweet Type"].to_numpy() == "Tweet").sum())
-        number_of_retweets = str((self.excel_df["Tweet Type"].to_numpy() == "Retweet").sum())
+        number_of_tweets = str((self.df["Tweet Type"].to_numpy() == "Tweet").sum())
+        number_of_retweets = str((self.df["Tweet Type"].to_numpy() == "Retweet").sum())
         
         return number_of_tweets, number_of_retweets
     
@@ -54,18 +68,21 @@ class excel_analyser:
         the spaces might be an issue here. We also want to make sure we don't accidentally get rid of a hashtag like "#stopbrexit" or "#yaytobrexit" just 
         because it has the word Brexit in it. Let me know if you guys have any ideas as to how to deal with this. 
         
-        
         Ignore is a list of hashtags that you do not want to include in your word cloud. For example, it might be that one hashtag it so common it eclipses all the other ones and so the word cloud only shows 1 word.
         
         """
         
         list_of_words = []
-        for i in self.excel_df["Hashtags"]:
+        for i in self.df["Hashtags"]:
             if type(i) == str:
                 for j in list_of_hashtag_variations:
                     if j in i:
                         i = i.replace(j, "") # if a tweet has more than one hashtag, we want to get rid of the one that we already have, i.e.: Brexit --> we want to see what other hashtags use GIVEN that someone tweets #Brexit
                 list_of_words.append(i)
+            elif type(i) == list: # this is for the case when each entry is a list (this happens when we have to manually create a "Tweets" column)
+                for j in i:
+                    if j not in list_of_hashtag_variations:
+                        list_of_words.append(j)
 
         self.updated_list = []        
         for num, i in enumerate(list_of_words):
@@ -148,6 +165,22 @@ class excel_analyser:
             
         return dictionary 
             
+    def find_all_hashtags_in_tweet(self):
+        # all the hashtags are in a column called "entities", but we need to clean it up first
+        
+        tweet_col = self.df.entities.values
+        list_of_hashtags = []
+        
+        for tweet_info in tweet_col:
+            hashtags_for_that_row = []
+            for dic in ast.literal_eval(tweet_info)["hashtags"]:
+                hashtags_for_that_row.append(dic["text"].lower())
+            list_of_hashtags.append(hashtags_for_that_row)
+        
+        self.df['Hashtags']=pd.Series(np.asarray(list_of_hashtags))
+            
+    
+    
     def _stem(self, dictionary):
         """
         Still need to figure out how to do this properly!
@@ -167,6 +200,10 @@ class excel_analyser:
             if len(dictionary_with_identical_starts[i]) != 0:
                 identical_keys.append(i)
                 corresponding_identical_words.append(dictionary_with_identical_starts[i])
-        
-x = excel_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
+                
+                
+x = data_analyser("ScrapingTwitterRealTime/datasets/scrape_data_2020-01-28-2020-01-29/brexit.csv")
 x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
+        
+#x = data_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
+#x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
