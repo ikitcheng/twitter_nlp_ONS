@@ -9,6 +9,7 @@ import pandas as pd
 import requests
 import datetime
 import yaml
+import progressbar
 
 
 def scrape_user_timeline(user, N):
@@ -79,7 +80,10 @@ def get_user_numerical_features(data):
     user = data[0]['user']
     nFollowers = user['followers_count']
     nFollowings = user['friends_count']
-    FollowersToFollowing = nFollowers / nFollowings
+    try:
+        FollowersToFollowing = nFollowers / nFollowings
+    except ZeroDivisionError:
+        FollowersToFollowing = np.nan
 
     # 
     nLists = user['listed_count']
@@ -150,7 +154,7 @@ def fav(data, P):
         if (isinstance(data[i]['in_reply_to_status_id'], int)):  # a reply
             fav_count_replies.append(data[i]['favorite_count'])
 
-        elif ('retweeted_status' in data[i].keys()):  # a retweet
+        elif ('retweeted_status' in data[i].keys() or data[i]['is_quote_status']):  # a retweet
             fav_count_retweets.append(data[i]['favorite_count'])
 
         else:  # an original tweet
@@ -191,7 +195,7 @@ def ret(data, P):
         if (isinstance(data[i]['in_reply_to_status_id'], int)):  # a reply
             ret_count_replies.append(data[i]['retweet_count'])
 
-        elif ('retweeted_status' in data[i].keys()):  # post is a retweet
+        elif ('retweeted_status' in data[i].keys() or data[i]['is_quote_status']):  # post is a retweet
             ret_count_retweets.append(data[i]['retweet_count'])
 
         else:  # post is an original tweet
@@ -230,7 +234,7 @@ def pop_fav(data, P, nFollowings):
     try:
         Likes_popularity_score = s / n / nFollowings
     except ZeroDivisionError:
-        print(f'There are no {P} in the data...')
+        #print(f'There are no {P} in the data...')
         return np.nan
     return Likes_popularity_score
 
@@ -258,7 +262,7 @@ def pop_ret(data, P, nFollowings):
     try:
         Retweets_popularity_score = s / n / nFollowings
     except ZeroDivisionError:
-        print(f'There are no {P} in the data...')
+        #print(f'There are no {P} in the data...')
         return np.nan
     return Retweets_popularity_score
 
@@ -285,7 +289,7 @@ def get_statistical_features(data):
     nPostPlace : int
         Number of posts that were posted in association with a place 
         (geo-tagged tweet).
-    Tavg : int
+    Tavg : float
         Average time interval (in seconds) between tweets.
 
     """
@@ -333,38 +337,24 @@ def main(users, N):
     Dataframe of features. Each row is a user, and each column is a feature. 
 
     """
-    df = pd.DataFrame(columns=['nFollowers',
-                               'nFollowings',
-                               'FollowersToFollowing',
-                               'nLists',
-                               'nFavs',
-                               'nPosts',
-                               'geo',
-                               'location',
-                               'url',
-                               'description',
-                               'verified',
-                               'fav_tweets',
-                               'fav_retweets',
-                               'fav_replies',
-                               'ret_tweets',
-                               'ret_retweets',
-                               'ret_replies',
-                               'pop_fav_tweets',
-                               'pop_fav_retweets',
-                               'pop_fav_replies',
-                               'pop_ret_tweets',
-                               'pop_ret_retweets',
-                               'pop_ret_replies',
-                               'nPostMention',
-                               'nPostQuote',
-                               'nPostPlace',
-                               'Tavg'],
-                      index=users)
+    users_data_dict = {}
+
+    bar = progressbar.ProgressBar(max_value=len(users))
+    counter = 0
     for user in users:
+        counter += 1
+        bar.update(counter)
+
         print(f'\nScraping: {user}')
         data = scrape_user_timeline(user, N)
         if len(data) == 0:
+            #print('No posts found.')
+            continue
+        elif (isinstance(data, dict)) and ('errors' in data.keys()):
+            #print('User does not exist.')
+            continue
+        elif (isinstance(data, dict)) and ('error' in data.keys()):
+            #print('Account suspended.')
             continue
         # user features
         nFollowers, nFollowings, FollowersToFollowing, nLists, nFavs, nPosts = get_user_numerical_features(
@@ -392,39 +382,71 @@ def main(users, N):
         # other features
         nPostMention, nPostQuote, nPostPlace, Tavg = get_statistical_features(
             data)
-
-        df.loc[user] = [nFollowers,
-                        nFollowings,
-                        FollowersToFollowing,
-                        nLists,
-                        nFavs,
-                        nPosts,
-                        geo,
-                        location,
-                        url,
-                        description,
-                        verified,
-                        fav_tweets[0],
-                        fav_retweets[0],
-                        fav_replies[0],
-                        ret_tweets[0],
-                        ret_retweets[0],
-                        ret_replies[0],
-                        pop_fav_tweets,
-                        pop_fav_retweets,
-                        pop_fav_replies,
-                        pop_ret_tweets,
-                        pop_ret_retweets,
-                        pop_ret_replies,
-                        nPostMention,
-                        nPostQuote,
-                        nPostPlace,
-                        Tavg]
+        
+        users_data_dict[user] = [nFollowers,
+                                   nFollowings,
+                                   FollowersToFollowing,
+                                   nLists,
+                                   nFavs,
+                                   nPosts,
+                                   geo,
+                                   location,
+                                   url,
+                                   description,
+                                   verified,
+                                   fav_tweets[0],
+                                   fav_retweets[0],
+                                   fav_replies[0],
+                                   ret_tweets[0],
+                                   ret_retweets[0],
+                                   ret_replies[0],
+                                   pop_fav_tweets,
+                                   pop_fav_retweets,
+                                   pop_fav_replies,
+                                   pop_ret_tweets,
+                                   pop_ret_retweets,
+                                   pop_ret_replies,
+                                   nPostMention,
+                                   nPostQuote,
+                                   nPostPlace,
+                                   Tavg]
+    
+    df = pd.DataFrame.from_dict(users_data_dict, orient='index')
+    df.columns = ['nFollowers',
+                'nFollowings',
+                'FollowersToFollowing',
+                'nLists',
+                'nFavs',
+                'nPosts',
+                'geo',
+                'location',
+                'url',
+                'description',
+                'verified',
+                'fav_tweets',
+                'fav_retweets',
+                'fav_replies',
+                'ret_tweets',
+                'ret_retweets',
+                'ret_replies',
+                'pop_fav_tweets',
+                'pop_fav_retweets',
+                'pop_fav_replies',
+                'pop_ret_tweets',
+                'pop_ret_retweets',
+                'pop_ret_replies',
+                'nPostMention',
+                'nPostQuote',
+                'nPostPlace',
+                'Tavg']
+                                                
     df.to_csv('users_features.csv')
     return df
 
 # In[]:
 if __name__ == '__main__':
-    N = 10  # number of posts to scrape from user timeline
-    users = ['ikitcheng', 'nlad95']
-    main(users, N)
+    # with open('users.csv', "r") as f:
+    #     users = f.readlines()
+    N = 200  # number of posts to scrape from user timeline
+    users = ['Miss_Asabe','mkayla_bayla','naijama']
+    df = main(users, N)
