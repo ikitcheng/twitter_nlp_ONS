@@ -13,11 +13,20 @@ import yaml
 
 def scrape_user_timeline(user, N):
     """
-    Scrape the latest N posts from user timeline.
-    Inputs: user (string)
-            N (int)
 
-    Output: tweet objects (https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object)
+    Parameters
+    ----------
+    user : string
+        Twitter username.
+    N : int
+        Number of most recent posts of each user.
+
+    Returns
+    -------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object. 
+        https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
+
     """
 
     # twitter api endpoint
@@ -40,64 +49,111 @@ def scrape_user_timeline(user, N):
 # In[]:
 
 ################################## Features ##################################
-# In[]:
+
 # Metadata of user profile
 
 def get_user_numerical_features(data):
+    """
+
+    Parameters
+    ----------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object. 
+
+    Returns
+    -------
+    nFollowers : int
+        Number of followers.
+    nFollowings : int
+        Number of followings. 
+    FollowersToFollowing : float
+        Number of followers / Number of followings.
+    nLists : int
+        Number of public lists the user is a member of.
+    nFavs : int
+        Number of tweets the user has liked.
+    nPosts : int
+        Total number of posts.
+
+    """
     user = data[0]['user']
     nFollowers = user['followers_count']
     nFollowings = user['friends_count']
     FollowersToFollowing = nFollowers / nFollowings
 
-    # number of public lists this user is a member of
+    # 
     nLists = user['listed_count']
-    nFavs = user['favourites_count']  # number of tweets this user has ‘liked’
-    nPosts = user['statuses_count']  # total number of posts
-    return [
-        nFollowers,
-        nFollowings,
-        FollowersToFollowing,
-        nLists,
-        nFavs,
-        nPosts]
-
+    nFavs = user['favourites_count']  
+    nPosts = user['statuses_count']  
+    return (nFollowers, nFollowings, FollowersToFollowing, nLists,
+            nFavs, nPosts)
 
 def get_user_binary_features(data):
+    """
+
+    Parameters
+    ----------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object. 
+
+    Returns
+    -------
+    geo_enabled : bool
+        Whether the user enabled geo-tagging.
+    location_provided : bool
+        Whether the user provided a location associated with the post.
+    url_provided : bool
+        Whether the user has an URL in association with their profile.
+    description_provided : bool
+        Whether the profile has a description.
+    verified : bool
+        Whether the account is verified.
+
+    """
     user = data[0]['user']
     geo_enabled = user['geo_enabled']
     location_provided = len(user['location']) is not 0
     url_provided = user['url'] is not None
     description_provided = len(data[0]['user']['description']) is not 0
     verified = user['verified']
-    return [geo_enabled, location_provided, url_provided, description_provided,
-            verified]
-
+    return (geo_enabled, location_provided, url_provided, description_provided,
+            verified)
 
 # In[]:
 # Popularity of post feature
 
 # retweeted_status attribute contains representation of the ORIGINAL Tweet
-# premium features: reply_count
 # N.B. each post by the user can be an original tweet, a retweet or a reply
 
 def fav(data, P):
     """
-    Number of users liking the post of the user
-    Input: P = 'tweets', 'retweets' or 'replies'
+    
+    Parameters
+    ----------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object.
+    P : string
+        Type of post: 'tweets', 'retweets' or 'replies'
+
+    Returns
+    -------
+    int
+        Number of users favoring the post P of the user.
+
     """
+
     fav_count_tweets = []
     fav_count_retweets = []
     fav_count_replies = []
 
     for i in range(len(data)):  # for each post
-        if (isinstance(data[i]['in_reply_to_status_id'], int)
-            ):  # post is a reply
+        if (isinstance(data[i]['in_reply_to_status_id'], int)):  # a reply
             fav_count_replies.append(data[i]['favorite_count'])
 
-        elif ('retweeted_status' in data[i].keys()):  # post is a retweet
+        elif ('retweeted_status' in data[i].keys()):  # a retweet
             fav_count_retweets.append(data[i]['favorite_count'])
 
-        else:  # post is an original tweet
+        else:  # an original tweet
             fav_count_tweets.append(data[i]['favorite_count'])
 
     if P == 'replies':
@@ -112,8 +168,19 @@ def fav(data, P):
 
 def ret(data, P):
     """
-    Number of users retweeting the post of the user
-    Input: P = 'tweets', 'retweets' or 'replies'
+
+    Parameters
+    ----------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object.
+    P : string
+        Type of post: 'tweets', 'retweets' or 'replies'
+
+    Returns
+    -------
+    int
+        Number of users retweeting the post of the user.
+
     """
 
     ret_count_tweets = []
@@ -142,13 +209,23 @@ def ret(data, P):
 
 def pop_fav(data, P, nFollowings):
     """
-    Popularity of user based on likes
 
-    Input: P = 'tweets', 'retweets' or 'replies'
-           nFollowings = number of followings of the user
+    Parameters
+    ----------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object.
+    P : string
+        Type of post: 'tweets', 'retweets' or 'replies'
+    nFollowings : int
+        Number of followings.
 
-    Output: Likes_popularity_score (float)
+    Returns
+    -------
+    float
+        Popularity score of the user's posts based on likes.
+
     """
+
     s, n = fav(data, P)
     try:
         Likes_popularity_score = s / n / nFollowings
@@ -160,13 +237,23 @@ def pop_fav(data, P, nFollowings):
 
 def pop_ret(data, P, nFollowings):
     """
-    Popularity of user based on retweets
 
-    Input: P = 'tweets', 'retweets' or 'replies'
-           nFollowings = number of followings of the user
+    Parameters
+    ----------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object.
+    P : string
+        Type of post: 'tweets', 'retweets' or 'replies'
+    nFollowings : int
+        Number of followings.
 
-    Output: Retweets_popularity_score (float)
+    Returns
+    -------
+    float
+        Popularity score of the user's posts based on retweets.
+
     """
+
     s, n = ret(data, P)
     try:
         Retweets_popularity_score = s / n / nFollowings
@@ -181,8 +268,28 @@ def pop_ret(data, P, nFollowings):
 # Statistical features
 
 def get_statistical_features(data):
-    # number of posts that contain a mention to
-    # another user
+    """
+
+    Parameters
+    ----------
+    data : list
+        A list of dictionaries, each dictionary is a Tweet object. 
+        https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
+
+    Returns
+    -------
+    nPostMention : int
+        Number of posts that contain a mention to another user.
+    nPostQuote : int
+        Number of quoted tweets (i.e. retweets with a comment).
+    nPostPlace : int
+        Number of posts that were posted in association with a place 
+        (geo-tagged tweet).
+    Tavg : int
+        Average time interval (in seconds) between tweets.
+
+    """
+
     nPostMention = 0
     nPostQuote = 0
     nPostPlace = 0
@@ -190,40 +297,42 @@ def get_statistical_features(data):
     for i in range(len(data)):  # for each post
         if data[i]['entities']['user_mentions']:
             nPostMention += 1
-
-    # number of quoted tweets (i.e. retweets with
-    # a comment)
+    
         if data[i]['is_quote_status']:
             nPostQuote += 1
-
-    # number of posts that were posted in
-    # association with a place (geo-tagged tweet)
+            
         if data[i]['place']:
             nPostPlace += 1
 
-    # average interval between tweets
     t1 = data[len(data) - 1]['created_at']
     t2 = data[0]['created_at']
     datetime1 = datetime.datetime.strptime(t1, '%a %b %d %H:%M:%S %z %Y')
     datetime2 = datetime.datetime.strptime(t2, '%a %b %d %H:%M:%S %z %Y')
 
     Tinterval = (datetime2 - datetime1).total_seconds()
-    try:
-        Tavg = len(data) / Tinterval
-    except ZeroDivisionError:
-        print("Time interval is 0 between first "
-              "and last post.")
+    Tavg = Tinterval / len(data)
+    if Tavg == 0:
         Tavg = np.nan
 
-    # can't find attribute with this information.
     return (nPostMention, nPostQuote,
             nPostPlace, Tavg)
 
-
 # In[]:
-if __name__ == '__main__':
-    N = 10  # number of posts to scrape from user timeline
-    users = ['ikitcheng', 'nlad95']
+def main(users, N):
+    """
+    
+    Parameters
+    ----------
+    users : list
+        A list of Twitter usernames.
+    N : int
+        Number of most recent posts of each user.
+
+    Returns
+    -------
+    Dataframe of features. Each row is a user, and each column is a feature. 
+
+    """
     df = pd.DataFrame(columns=['nFollowers',
                                'nFollowings',
                                'FollowersToFollowing',
@@ -312,3 +421,10 @@ if __name__ == '__main__':
                         nPostPlace,
                         Tavg]
     df.to_csv('users_features.csv')
+    return df
+
+# In[]:
+if __name__ == '__main__':
+    N = 10  # number of posts to scrape from user timeline
+    users = ['ikitcheng', 'nlad95']
+    main(users, N)
