@@ -37,7 +37,7 @@ do
     echo '---------------------------------------------'
     echo "scraping twitter for: #${hashtags[$j]}"
     echo $'--------------------------------------------- \n'
-    python scrape.py -t ${hashtags[$j]} -s ${since[$i]} -u ${until[$i]} 
+    python scrapeHashtags.py -t ${hashtags[$j]} -s ${since[$i]} -u ${until[$i]} 
     -f scrape_data_${dir}/${hashtags[$j]}.csv -c config.yaml
     echo $'\n---------------------------------------------'
     echo "scrape ${j} / ${hashtaglength} complete"
