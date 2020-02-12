@@ -22,6 +22,7 @@ import botometer
 import re
 import progressbar
 from textblob import TextBlob
+from argparse import ArgumentParser
 
 
 dict_of_hashtags = {"eu": ["europeanunion"],
@@ -32,26 +33,39 @@ dict_of_hashtags = {"eu": ["europeanunion"],
                               "ukeureferendum"],
                     "ukexit": ["ukexitseu"]}
 
-headers_for_basic_files = ["created_at", "id", "text", "entities", "source", 
-                           "user.id", "user.screen_name", "user.location", 
-                           "user.followers_count", "user.friends_count", 
-                           "user.verified", "user.statuses_count", "geo", "coordinates",
-                           "place_name", "user_location2", "retweet_count", 
-                           "tweet_favorite_count", "tweet_favorited", "tweet_retweeted"]
+
+# headers for datasets/Basic_Headers
+# headers = ["created_at", "id", "text", "entities", "source", 
+#                            "user.id", "user.screen_name", "user.location", 
+#                            "user.followers_count", "user.friends_count", 
+#                            "user.verified", "user.statuses_count", "geo", "coordinates",
+#                            "place_name", "user_location2", "retweet_count", 
+#                            "tweet_favorite_count", "tweet_favorited", "tweet_retweeted"]
 
 
+# headers for datasets/All_Headers
+headers = ["created_at", "id", "text", "entities", "source", 
+            "user", "user.id", "user.screen_name", "user.location", 
+            "user.followers_count", "user.friends_count", "user.created_at",
+            "user.favourites_count", "user.statuses_count", "user.verified",
+            "user.statuses_count", "geo", "coordinates", "place", "retweeted_status.text", 
+            "retweet_count", "tweet_favorite_count", "tweet_retweeted", "tweet_favorited"]
 
-class data_analyser:
+
+class DataAnalyser:
+    
     def __init__(self, file_name, sheet_name = None):
         self.file_name = file_name
+        self.word_cloud_file = file_name.split('scrape_data_')[1].strip('.csv').replace('/', '-')
         if self.file_name.endswith(".xlsx"):  
             self.sheet_name = sheet_name
             self.df = pd.read_excel(io=self.file_name, sheet_name=self.sheet_name)
         elif self.file_name.endswith(".csv"):
             self.df = pd.read_csv(filepath_or_buffer = self.file_name, sep = ",")
-            self.df.columns = headers_for_basic_files # adding headers at the top
+            self.df.columns = headers # adding headers at the top
             self.find_all_hashtags_in_tweet() # finds all the hashtags in each tweet and adds a new row
-            
+
+
     def follower_friend_ratio(self, plot = False):
         
         self.df["Follower-friend ratio"] = self.df["Number of Followers"]/self.df["Number Following"]
@@ -69,6 +83,7 @@ class data_analyser:
     
         return df_np_ffr
     
+
     def tweet_stats(self):
         number_of_tweets = str(
             (self.df["Tweet Type"].to_numpy() == "Tweet").sum())
@@ -76,7 +91,7 @@ class data_analyser:
             (self.df["Tweet Type"].to_numpy() == "Retweet").sum())
 
         return number_of_tweets, number_of_retweets
-    
+
 
     def hashtag_freq(self, list_of_hashtag_variations, ignore=None,
                      wordcloud=False, save=False):
@@ -151,9 +166,10 @@ class data_analyser:
             plt.imshow(wordcloud)
             plt.axis("off")
             if save:
-                plt.savefig("wordcloud.jpg")
+                plt.savefig("Wordclouds/wordcloud-" + self.word_cloud_file + ".png")
             plt.show()
         return self.dict_of_words
+
 
     def _eliminate_non_ascii(self, dictionary):
         """
@@ -167,6 +183,7 @@ class data_analyser:
         for key in keys_to_be_deleted:
             del dictionary[key]
 
+
     def _eliminate_one_off_hashtags(self, dictionary):
         """
         Eliminates hashtags that occur fewer than five times
@@ -174,6 +191,7 @@ class data_analyser:
         for key in list(dictionary):
             if dictionary[key] <= 5:
                 del dictionary[key]
+
 
     def _combine_hashtags_that_are_the_same(self, dictionary, hashtag_dict):
         """
@@ -196,7 +214,8 @@ class data_analyser:
             del dictionary[i]
             
         return dictionary 
-            
+
+
     def find_all_hashtags_in_tweet(self):
         # all the hashtags are in a column called "entities", but we need to clean it up first
         
@@ -211,9 +230,6 @@ class data_analyser:
         
         self.df['Hashtags']=pd.Series(np.asarray(list_of_hashtags))
             
-    
-    
-
 
     def _stem(self, dictionary):
         """
@@ -237,7 +253,6 @@ class data_analyser:
                     dictionary_with_identical_starts[i])
                 
                 
-
     def gen_wordcloud(self, dict_of_words, save=False):
         """
         Input: list_of_words
@@ -257,7 +272,8 @@ class data_analyser:
         plt.show()
         if save:
             plt.savefig("wordcloud.jpg")
-            
+
+
     def clean_tweet(self, tweet):
         """
         Input: tweet (originial)
@@ -284,6 +300,7 @@ class data_analyser:
         clean_tweet = ' '.join(filtered_tokens)
         return clean_tweet.lower()
 
+
     def sentiment_analysis(self, list_of_tweets):
         """
         Input: list_of_tweets
@@ -296,6 +313,7 @@ class data_analyser:
             p, s = t.sentiment
             sentiments[i] = [p, s]
         return sentiments
+
 
     def BotOrNot(self, username, authentication):
         """
@@ -326,21 +344,34 @@ class data_analyser:
             return 0
 
 
-x = data_analyser("ScrapingTwitterRealTime/datasets/scrape_data_2020-01-28-2020-01-29/brexit.csv")
-x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
+parser = ArgumentParser(
+        description="Execute sentiment analysis and generate word clouds from provided twitter data file")
+parser.add_argument(
+        '--filename',
+	'-f',
+        help="file containing twitter data")
+
+args = parser.parse_args()
+filename = args.filename
+
+# x = DataAnalyser("../Scraper/datasets/All_Headers/scrape_data_2020-01-29-2020-01-30/brexit.csv")
+analyser = DataAnalyser(filename)
+print(analyser.df.head())
+print(analyser.df['user.location'])
+# analyser.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)
         
-#x = data_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
+#x = DataAnalyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
 #x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
 
-y = excel_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
-y.hashtag_freq(['Brexit ',
-                'brexit ',
-                'BREXIT ',
-                ' Brexit',
-                ' brexit',
-                ' BREXIT',
-                'Brexit',
-                'brexit',
-                'BREXIT'],
-               wordcloud=False)
-y.gen_wordcloud(x.dict_of_words, True)
+# y = excel_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
+# y.hashtag_freq(['Brexit ',
+#                 'brexit ',
+#                 'BREXIT ',
+#                 ' Brexit',
+#                 ' brexit',
+#                 ' BREXIT',
+#                 'Brexit',
+#                 'brexit',
+#                 'BREXIT'],
+#                wordcloud=False)
+# y.gen_wordcloud(analyser.dict_of_words, True)

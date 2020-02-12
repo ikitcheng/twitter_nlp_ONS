@@ -1,4 +1,8 @@
-# nlad 04/02/2020
+"""
+Created on Tues Feb 04 2020
+
+@author: nlad
+"""
 
 import tweepy
 import os
@@ -92,9 +96,10 @@ for i, tweet in enumerate(tweepy.Cursor(api.search,q=hashtag,count=200,
 
     tweets_encoded = tweet.text.encode('utf-8')
     tweets_decoded = tweets_encoded.decode('utf-8')
-    csvWriter.writerow([tweet.created_at, tweet.id, tweets_decoded, tweet.entities, 
-                        tweet.source, tweet.user,
-                        tweet._json["user"]["id"], tweet._json["user"]["screen_name"], 
+    csvWriter.writerow([tweet.created_at, tweet.id, tweets_decoded, 
+                        tweet.entities, tweet.source, tweet.user,
+                        tweet._json["user"]["id"], 
+                        tweet._json["user"]["screen_name"], 
                         tweet._json["user"]["location"], 
                         tweet._json["user"]["followers_count"], 
                         tweet._json["user"]["friends_count"],
@@ -103,11 +108,9 @@ for i, tweet in enumerate(tweepy.Cursor(api.search,q=hashtag,count=200,
                         tweet._json["user"]["statuses_count"],
                         tweet._json["user"]["verified"], 
                         tweet._json["user"]["statuses_count"],
-                        tweet.geo, 
                         tweet.coordinates if tweet.coordinates else None, 
                         tweet.place.name if tweet.place else None, 
                         on_status(tweet),
-                        # tweet._json["retweeted_status"] if tweet._json["retweeted_status"] else None,
                         tweet.retweet_count, tweet.favorite_count, 
                         tweet.retweeted,
                         tweet.favorited if tweet.favorited else None,
