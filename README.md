@@ -9,7 +9,13 @@ This repo contains tools to pull data from Twitter and analyse tweets according 
   - Scraper script is set up to automate the continuous pull of twitter data containing specified hashtags; limited to the last 7 days
   - Scraper can be extended to pull tweets containing any tweet attribute
   - User config file must be provided to authenticate against the Twitter API
-- Data Analyser:
+- Cleaner:
+  - Clean twitter metadata
+- FeX:
+  - Feature Extraction
+- WordCloudGen:
   - Word Cloud Generator
-  - Sentiment Analysis
-  - BorOrNot - user classification
+- Classifier:
+  - User Classification
+- GeoTagger
+  - Used to determine geo-spatial sentiment analysis / region based
