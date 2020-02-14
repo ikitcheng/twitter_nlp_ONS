@@ -1,0 +1,23 @@
+## Hashtags collected:
+
+- brexit
+- brexitshambles
+- brexiteve
+- leave
+- remain
+- eu
+- referendum
+- ukref
+- voteleave
+- voteremain
+- boris
+- farage
+- Brexit50p
+- Brexiteers
+- tory
+- labour
+- GotBrexitDone
+- GetBrexitDone
+- BlueCollarBritain
+- BlueWall
+- NotMyBrexit
