@@ -13,7 +13,7 @@ user.created_at
 user.favourites_count
 user.statuses_count
 user.verified
-user.statuses_count
+statuses_count
 geo
 coordinates
 place
