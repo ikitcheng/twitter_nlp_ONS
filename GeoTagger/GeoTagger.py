@@ -2,6 +2,7 @@ import tarfile
 import pandas as pd
 import csv
 from geopy.geocoders import Nominatim
+import geopy
 
 
 # move this function to the cleaner?
@@ -57,16 +58,32 @@ def get_geo_info(place_name):
 
 
 # prepare the dataset we wish to analyse
-# root_dir_data = "../Scraper/datasets/Brexit/All_Headers/"
-# dataset = root_dir_data + "scrape_data_2020-01-29-2020-01-30.tar.gz"
-# with open(root_dir_data + "headers.csv", newline='') as f:
-#     reader = csv.reader(f)
-#     headers = [row[0] for row in reader]
+root_dir_data = "../Scraper/datasets/Brexit/All_Headers/"
+dataset = root_dir_data + "scrape_data_2020-01-29-2020-01-30.tar.gz"
+with open(root_dir_data + "headers.csv", newline='') as f:
+    reader = csv.reader(f)
+    headers = [row[0] for row in reader]
 
-# hashtags_df = read_and_merge_scraped_data(dataset, headers)
+hashtags_df = read_and_merge_scraped_data(dataset, headers)
 
-# print(hashtags_df.head())
-# print(hashtags_df.shape)
+print(hashtags_df.head())
+print(hashtags_df.shape)
+
+# coords = hashtags_df[hashtags_df['coordinates'].notna()]
+
+# print(coords['coordinates'])
+# print(coords.shape)
+
+
+# place = hashtags_df[hashtags_df['place'].notna()]
+# print(place['place'])
+# print(place.shape)
+
+
+# user location is the key value to use!
+user_loc = hashtags_df[hashtags_df['user.location'].notna()]
+print(user_loc['user.location'])
+print(user_loc.shape)
 
 
 # unique_hashtags = hashtags_df['user.location'].unique()
@@ -101,7 +118,18 @@ print(df)
 df[['geo_lat', 'geo_long']] = df['user.location'].apply(lambda x: get_geo_info(x))
 print(df)
 
-import plotly.express as px
-fig = px.scatter_geo(df, lat=df['geo_lat'], lon=df['geo_long'])
-fig.show()
+# import plotly.express as px
+# fig = px.scatter_geo(df, lat=df['geo_lat'], lon=df['geo_long'])
+# fig.show()
 
+# TODO: look for 'user.geo_enabled' attribute?? - may be able to extract a non-null lat and long value
+
+import folium
+
+map1 = folium.Map(
+    location=[53.8, 4.5],
+    tiles='cartodbpositron',
+    zoom_start=3,
+)
+df.apply(lambda row:folium.CircleMarker(location=[row["geo_lat"], row["geo_long"]]).add_to(map1), axis=1)
+map1.save('geotagger_test.html')
