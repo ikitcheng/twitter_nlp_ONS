@@ -3,3 +3,4 @@ config.yaml
 .vs_code
 __pycache__
 twitter_nlp_ONS.egg-info
+*.png
