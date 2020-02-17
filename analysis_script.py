@@ -15,6 +15,13 @@ from wordcloud import WordCloud
 from nltk.corpus import stopwords
 from collections import defaultdict
 import ast 
+from nltk.stem import WordNetLemmatizer
+import nltk
+import string
+#import botometer
+import re
+#import progressbar
+#from textblob import TextBlob
 
 dict_of_hashtags = {"eu": ["europeanunion"], "euref": ["eureferendum", "eurefresults", "eurefresult"], 
                     "ukref": ["ukreferendum", "ukeureferendum"], "ukexit": ["ukexitseu"]}
@@ -35,7 +42,7 @@ class data_analyser:
             self.sheet_name = sheet_name
             self.df = pd.read_excel(io=self.file_name, sheet_name=self.sheet_name)
         elif self.file_name.endswith(".csv"):
-            self.df = pd.read_csv(filepath_or_buffer = self.file_name, sep = ",")
+            self.df = pd.read_csv(filepath_or_buffer = self.file_name, sep = ",", error_bad_lines=False)
             self.df.columns = headers_for_basic_files # adding headers at the top
             self.find_all_hashtags_in_tweet() # finds all the hashtags in each tweet and adds a new row
             
@@ -76,12 +83,16 @@ class data_analyser:
         for i in self.df["Hashtags"]:
             if type(i) == str:
                 for j in list_of_hashtag_variations:
-                    if j in i:
-                        i = i.replace(j, "") # if a tweet has more than one hashtag, we want to get rid of the one that we already have, i.e.: Brexit --> we want to see what other hashtags use GIVEN that someone tweets #Brexit
+                    if j.lower() in i:
+                        # if a tweet has more than one hashtag, we want to get
+                        # rid of the one that we already have, i.e.: Brexit -->
+                        # we want to see what other hashtags use GIVEN that
+                        # someone tweets #Brexit
+                        i = i.replace(j, "")
                 list_of_words.append(i)
             elif type(i) == list: # this is for the case when each entry is a list (this happens when we have to manually create a "Tweets" column)
                 for j in i:
-                    if j not in list_of_hashtag_variations:
+                    if j.lower() not in list_of_hashtag_variations:
                         list_of_words.append(j)
 
         self.updated_list = []        
@@ -171,14 +182,17 @@ class data_analyser:
         tweet_col = self.df.entities.values
         list_of_hashtags = []
         
-        for tweet_info in tweet_col:
+        for i, tweet_info in enumerate(tweet_col):
             hashtags_for_that_row = []
-            for dic in ast.literal_eval(tweet_info)["hashtags"]:
-                hashtags_for_that_row.append(dic["text"].lower())
+            #print(i)
+            if ast.literal_eval(tweet_info):
+                for dic in ast.literal_eval(tweet_info)["hashtags"]:
+                    hashtags_for_that_row.append(dic["text"].lower())
             list_of_hashtags.append(hashtags_for_that_row)
-        
-        self.df['Hashtags']=pd.Series(np.asarray(list_of_hashtags))
-            
+        #print(pd.Series(np.asarray(list_of_hashtags)))
+        #self.df['Hashtags']=pd.Series(np.asarray(list_of_hashtags))
+        self.df['Hashtags']=list_of_hashtags
+   
     
     
     def _stem(self, dictionary):
@@ -202,8 +216,114 @@ class data_analyser:
                 corresponding_identical_words.append(dictionary_with_identical_starts[i])
                 
                 
-x = data_analyser("ScrapingTwitterRealTime/datasets/scrape_data_2020-01-28-2020-01-29/brexit.csv")
-x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
+#x = data_analyser("ScrapingTwitterRealTime/datasets/scrape_data_2020-01-28-2020-01-29/brexit.csv")
+#x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
         
 #x = data_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
 #x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
+    
+    def gen_wordcloud(self, dict_of_words, save=False):
+        
+        #Input: list_of_words
+        #output: wordcloud
+        
+        string_of_words = ""
+        for word in self.dict_of_words.keys():
+            string_of_words = string_of_words + \
+                (word + " ") * self.dict_of_words[word]
+        wordcloud = WordCloud(relative_scaling=0.5,
+                              stopwords=set(STOPWORDS),
+                              collocations=False
+                              ).generate(string_of_words)
+
+        plt.imshow(wordcloud)
+        plt.axis("off")
+        plt.show()
+        if save:
+            plt.savefig("wordcloud.jpg")
+            
+    def clean_tweet(self, tweet):
+        
+        #Input: tweet (originial)
+        #output: tweet without RT tag, username and urls, punctuation
+        
+
+        # remove url
+        clean_tweet = re.sub(r"http\S+", "", tweet)
+        # remove @username
+        clean_tweet = re.sub(r"@\S+", "", clean_tweet)
+        # remove RT
+        clean_tweet = re.sub(r"RT", "", clean_tweet)
+        # remove #hastags
+        clean_tweet = re.sub(r"#\S+", "", clean_tweet)
+        # remove punctuation
+        tokens = [word.lower() for sent in nltk.sent_tokenize(clean_tweet) for
+                  word in nltk.word_tokenize(sent)]
+        filtered_tokens = []
+        # filter out any tokens not containing letters (e.g., numeric tokens,
+        # raw punctuation)
+        for token in tokens:
+            if re.search('[a-zA-Z]', token):
+                filtered_tokens.append(token)
+        clean_tweet = ' '.join(filtered_tokens)
+        return clean_tweet.lower()
+
+    def sentiment_analysis(self, list_of_tweets):
+        
+       #Input: list_of_tweets
+       # output: sentiments = [polarity, subjectivity]
+        
+        nTweets = len(list_of_tweets)
+        sentiments = np.zeros([nTweets, 2])
+        for i, tweet in enumerate(list_of_tweets):
+            t = TextBlob(tweet)
+            p, s = t.sentiment
+            sentiments[i] = [p, s]
+        return sentiments
+
+    def BotOrNot(self, username, authentication):
+        
+        #Input: username = twitter handle
+         #      Authentication = [consumerKey, consumerSecret,
+          #                       accessToken, accessTokenSecret,
+           #                      rapidapiKey]
+        #Output: 1 = bot, 0 = not bot
+        
+
+        twitter_app_auth = {
+            'consumer_key': authentication[0],
+            'consumer_secret': authentication[1],
+            'access_token': authentication[2],
+            'access_token_secret': authentication[3]}
+
+        bom = botometer.Botometer(wait_on_ratelimit=True,
+                                  rapidapi_key=authentication[4],
+                                  **twitter_app_auth)
+
+        result = bom.check_account(username)
+        # if bot score> 0.43: bot = 1 else: 0 threshold setting:
+        # https://www.pewresearch.org/internet/2018/04/09/bots-in-the-twittersphere-methodology/
+        if (result['cap']['universal'] > 0.5) or \
+           (result['scores']['universal'] > 0.43):
+            return 1
+        else:
+            return 0
+#x = data_analyser("ScrapingTwitterRealTime/datasets/scrape_data_2020-01-28-2020-01-29/brexit.csv")
+#x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=False)#
+        
+#x = data_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
+#x.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)#
+
+y = data_analyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
+y.hashtag_freq(['Brexit ',
+                'brexit ',
+                'BREXIT ',
+                ' Brexit',
+                ' brexit',
+                ' BREXIT',
+                'Brexit',
+                'brexit',
+                'BREXIT'],
+               wordcloud=False)
+#y.gen_wordcloud(x.dict_of_words, True)
+x = data_analyser("ScrapingTwitterRealTime/datasets/scrape_data_2020-02-02-2020-02-03/brexiteers.csv")
