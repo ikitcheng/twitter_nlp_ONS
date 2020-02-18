@@ -7,6 +7,8 @@ import folium
 from folium import plugins
 from folium.plugins import FastMarkerCluster
 import time
+import re
+import ast
 
 
 # move this function to the cleaner?
@@ -62,20 +64,43 @@ def get_latitude_longitude(place_name):
     return pd.Series([location.latitude, location.longitude])
 
 
-def plot_and_save_map(df, filename):
+def get_precise_coords(precise_coords_series):
+    long_lat = ast.literal_eval(precise_coords_series).get('coordinates')
+    return pd.Series([long_lat[1], long_lat[0]])
+
+
+def plot_and_save_map(df, filename, precise_geo=True):
     """
     Extract coordinates, plot on an interactive map and save to html file
     """
-    # # test first N values in scraped data
-    N = 1000
-    coordinates_df = df.head(N)
+    # TODO: the next 2 lines will eventually be deleted - here for testing purposes
+    # test first N values in scraped data
+    N = 100
+    lat_long_df = df.head(N)
 
     # cocatenate latitude and longitude columns onto df
-    coordinates_df[['geo_lat', 'geo_long']] = coordinates_df['user.location'].apply(lambda x: get_latitude_longitude(x))
-
+    lat_long_df[['geo_lat', 'geo_long']] = lat_long_df['user.location'].apply(lambda x: get_latitude_longitude(x))
     # # drop NaNs
-    coordinates_df = coordinates_df.dropna(subset=['geo_lat', 'geo_long'], how='all')
-    print("Extracted " + str(coordinates_df.shape[0]/N * 100) + " percent of locations")
+    lat_long_df = lat_long_df.dropna(subset=['geo_lat', 'geo_long'], how='all')
+    print("Extracted " + str(lat_long_df.shape[0]/N * 100) + " percent of locations")
+
+    precise_geo_df = pd.DataFrame()
+    precise_coords_df = pd.DataFrame(columns=['user.location', 'geo_lat', 'geo_long'])
+    if precise_geo:
+        # geo enabled place & coords
+        precise_geo_series = hashtags_df['place'].dropna()
+        precise_coords_series = hashtags_df['coordinates'].dropna()
+
+        precise_geo_df = pd.DataFrame({'place' : precise_geo_series})
+        precise_geo_df[['geo_lat', 'geo_long']] = precise_geo_df['place'].apply(lambda x: get_latitude_longitude(x))
+        precise_geo_df = precise_geo_df.dropna(subset=['geo_lat', 'geo_long'], how='all')
+        precise_geo_df.rename(columns={"place": "user.location"})
+
+        precise_coords_df = pd.DataFrame({'place' : precise_coords_series})
+        precise_coords_df[['geo_lat', 'geo_long']] = precise_coords_df['place'].apply(lambda x: get_precise_coords(x))
+    
+    lat_long_df = pd.concat([lat_long_df, precise_geo_df, precise_coords_df])
+    print(lat_long_df.shape)
 
     map = folium.Map(
         location=[53.8, 4.5],
@@ -84,9 +109,10 @@ def plot_and_save_map(df, filename):
     )
 
     # plot and save
-    FastMarkerCluster(data=list(zip(coordinates_df['geo_lat'].values, coordinates_df['geo_long'].values))).add_to(map)
+    FastMarkerCluster(data=list(zip(lat_long_df['geo_lat'].values, lat_long_df['geo_long'].values))).add_to(map)
     folium.LayerControl().add_to(map)
     map.save(filename)
+
 
 
 
@@ -101,76 +127,9 @@ with open(root_dir_data + "headers.csv", newline='') as f:
 
 # process the data
 hashtags_df = read_and_merge_scraped_data(dataset, headers)
-save_map_path = "BrexitEvolutionMaps/scape_data_test_n=1000.html"
+save_map_path = "BrexitEvolutionMaps/scape_data_test_with_precise_geo_n=2000.html"
+# save_map_path = "BrexitEvolutionMaps/scape_data_test_with_precise_geo_n=10.html"
 plot_and_save_map(hashtags_df, save_map_path)
 
 end = time.time()
 print("Execution time: " + str((end - start)/60) + " mins")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# TEST WORK
-
-# coords = hashtags_df[hashtags_df['coordinates'].notna()]
-# print(coords['coordinates'])
-# print(coords.shape)
-# place = hashtags_df[hashtags_df['place'].notna()]
-# print(place['place'])
-# print(place.shape)
-
-# user location is the key value to use!
-# user_loc = hashtags_df[hashtags_df['user.location'].notna()]
-# print(user_loc['user.location'])
-# print(user_loc.shape)
-
-# TODO: look for 'user.geo_enabled' attribute?? - may be able to extract a non-null lat and long value
-
-
-# -----------------------------------------
-# TEST CASE:
-# -----------------------------------------
-# d = {'user.location': ['Ireland', 'London', 'Manchester', 'Wellingborough', 'sdfshghfhgfvd', 'London']}
-# df = pd.DataFrame(data=d)
-# print(df)
-
-# df[['geo_lat', 'geo_long']] = df['user.location'].apply(lambda x: get_geo_info(x))
-# print(df)
-
-# # drop NaNs
-# df = df.dropna(subset=['geo_lat', 'geo_long'], how='all')
-# print(df)
-# -----------------------------------------
-
-
-
-# -----------------------------------------
-# TEST CASE:
-# -----------------------------------------
-# map1 = folium.Map(
-#     location=[53.8, 4.5],
-#     tiles='cartodbpositron',
-#     zoom_start=3,
-# )
-# df.apply(lambda row:folium.CircleMarker(location=[row["geo_lat"], row["geo_long"]]).add_to(map1), axis=1)
-
-# # add in the quantities of tweets within a certain area
-# FastMarkerCluster(data=list(zip(df['geo_lat'].values, df['geo_long'].values))).add_to(map1)
-# folium.LayerControl().add_to(map1)
-
-# map1.save('geotagger_test.html')
-# -----------------------------------------
-
