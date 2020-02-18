@@ -4,8 +4,12 @@ import textpreprocessing as tp
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import ast 
 import numpy as np
+import os
+import nltk 
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-testimonial = TextBlob("Textblob is amazingly simple to use. What great fun!")
+hashtag = "brexit50p"
 
 headers_for_basic_files = ["created_at", "id", "text", "entities", "source", 
                            "user.id", "user.screen_name", "user.location", 
@@ -44,7 +48,6 @@ class sentiment_analyser:
         sentiment_scores = []
         
         for i,tweet in enumerate(self.tweet_col.values):
-            print(i)
             preprocessed_tweet = tp.clean_doc(tweet)
             mean_sentiment = np.mean([self.textblob_sentiment(preprocessed_tweet), 
                                       self.nltk_sentiment(preprocessed_tweet)])
@@ -53,8 +56,42 @@ class sentiment_analyser:
         
         self.df["Sentiment Polarity"] = sentiment_scores
         
-    
-    
-test = sentiment_analyser("twitter_nlp_ONS/ScrapingTwitterRealTime/datasets/scrape_data_2020-02-03-2020-02-04/brexit.csv", "text")
-test.aggregate_sentiment_analysis()   
+final_dict = {}
+directory = "/Users/johannesheyl/Dropbox/PhD/Group_Project/twitter_nlp_ONS/ScrapingTwitterRealTime/datasets/"
+
+dates = ["28/01/2020", "29/01/2020", "30/01/2020", "31/01/2020", "01/02/2020",
+         "02/02/2020", "03/02/2020",]
+folders = ["scrape_data_2020-01-28-2020-01-29", "scrape_data_2020-01-29-2020-01-30", 
+           "scrape_data_2020-01-30-2020-01-31", "scrape_data_2020-01-31-2020-02-01", 
+           "scrape_data_2020-02-01-2020-02-02", "scrape_data_2020-02-02-2020-02-03",
+           "scrape_data_2020-02-03-2020-02-04"]
+
+for i,date in enumerate(dates):
+   print(i)
+   corresponding_folder = folders[i]
+   sa = sentiment_analyser(directory + corresponding_folder + "/" + hashtag + ".csv", "text")
+   sa.aggregate_sentiment_analysis()
+   final_dict[date] = sa.df["Sentiment Polarity"].to_numpy()
+   
+list_of_df = []
+
+for i, date in enumerate(dates):
+    list_of_df.append(pd.DataFrame.from_dict({date: final_dict[date]}))
+
+i = pd.concat(list_of_df, ignore_index=True, axis=1)
+
+df = i.melt(var_name='date', value_name='Average sentiment')
+ax = sns.violinplot(x="date", y="Average sentiment", data=df)
+plt.title("Sentiment Analysis of Tweets containing #" + hashtag) 
+          
+fig = ax.get_figure()
+
+fig.savefig(hashtag)
+
+"""
+for file in os.listdir(directory):
+    sa = sentiment_analyser(directory, "text")
+    sa.aggregate_sentiment_analysis()
+"""    
+
 
