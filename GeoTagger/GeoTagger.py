@@ -3,6 +3,10 @@ import pandas as pd
 import csv
 from geopy.geocoders import Nominatim
 import geopy
+import folium
+from folium import plugins
+from folium.plugins import FastMarkerCluster
+import time
 
 
 # move this function to the cleaner?
@@ -35,7 +39,7 @@ def read_and_merge_scraped_data(dataset, headers):
         return hashtags_df
 
 
-def get_geo_info(place_name):
+def get_latitude_longitude(place_name):
     """
     Gets coordinates and address for a given place name using geopy
     """
@@ -47,15 +51,46 @@ def get_geo_info(place_name):
     try:
         location = geo_locator.geocode(place_name)
     except Exception:
-        return None
+        # return None
+        return pd.Series([None, None])
 
     if not location:
-        return None
+        # return None
+        return pd.Series([None, None])
 
     # return float(location.latitude), float(location.longitude)
     return pd.Series([location.latitude, location.longitude])
 
 
+def plot_and_save_map(df, filename):
+    """
+    Extract coordinates, plot on an interactive map and save to html file
+    """
+    # # test first N values in scraped data
+    N = 1000
+    coordinates_df = df.head(N)
+
+    # cocatenate latitude and longitude columns onto df
+    coordinates_df[['geo_lat', 'geo_long']] = coordinates_df['user.location'].apply(lambda x: get_latitude_longitude(x))
+
+    # # drop NaNs
+    coordinates_df = coordinates_df.dropna(subset=['geo_lat', 'geo_long'], how='all')
+    print("Extracted " + str(coordinates_df.shape[0]/N * 100) + " percent of locations")
+
+    map = folium.Map(
+        location=[53.8, 4.5],
+        tiles='cartodbpositron',
+        zoom_start=3,
+    )
+
+    # plot and save
+    FastMarkerCluster(data=list(zip(coordinates_df['geo_lat'].values, coordinates_df['geo_long'].values))).add_to(map)
+    folium.LayerControl().add_to(map)
+    map.save(filename)
+
+
+
+start = time.time()
 
 # prepare the dataset we wish to analyse
 root_dir_data = "../Scraper/datasets/Brexit/All_Headers/"
@@ -64,72 +99,78 @@ with open(root_dir_data + "headers.csv", newline='') as f:
     reader = csv.reader(f)
     headers = [row[0] for row in reader]
 
+# process the data
 hashtags_df = read_and_merge_scraped_data(dataset, headers)
+save_map_path = "BrexitEvolutionMaps/scape_data_test_n=1000.html"
+plot_and_save_map(hashtags_df, save_map_path)
 
-print(hashtags_df.head())
-print(hashtags_df.shape)
+end = time.time()
+print("Execution time: " + str((end - start)/60) + " mins")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TEST WORK
 
 # coords = hashtags_df[hashtags_df['coordinates'].notna()]
-
 # print(coords['coordinates'])
 # print(coords.shape)
-
-
 # place = hashtags_df[hashtags_df['place'].notna()]
 # print(place['place'])
 # print(place.shape)
 
-
 # user location is the key value to use!
-user_loc = hashtags_df[hashtags_df['user.location'].notna()]
-print(user_loc['user.location'])
-print(user_loc.shape)
-
-
-# unique_hashtags = hashtags_df['user.location'].unique()
-# print("Number of unique hashtags: ", len(unique_hashtags))
-# print(unique_hashtags)
-
-# print(hashtags_df['user.location'])
-# unique_locations = hashtags_df['user.location'].unique()
-# print("Number of unique locations: ", len(unique_locations))
-# print(unique_locations)
-
-# location = get_geo_info(unique_locations[-1])
-# print(location)
-# print(location.longitude)
-# print(location.latitude)
-
-# print(hashtags_df['user.location'].head())
-# print(type(hashtags_df['user.location'][0]))
-
-
-# nominatim_geo_location = [get_geo_info(location) for location in hashtags_df['user.location'].head()]
-# print(nominatim_geo_location)
-
-
-# hashtags_df['nomanatim_geo_location'] = hashtags_df['user.location'].apply(lambda x: get_geo_info(x))
-# print(hashtags_df.head())
-
-d = {'user.location': ['Ireland', 'London', 'Manchester', 'Wellingborough']}
-df = pd.DataFrame(data=d)
-print(df)
-
-df[['geo_lat', 'geo_long']] = df['user.location'].apply(lambda x: get_geo_info(x))
-print(df)
-
-# import plotly.express as px
-# fig = px.scatter_geo(df, lat=df['geo_lat'], lon=df['geo_long'])
-# fig.show()
+# user_loc = hashtags_df[hashtags_df['user.location'].notna()]
+# print(user_loc['user.location'])
+# print(user_loc.shape)
 
 # TODO: look for 'user.geo_enabled' attribute?? - may be able to extract a non-null lat and long value
 
-import folium
 
-map1 = folium.Map(
-    location=[53.8, 4.5],
-    tiles='cartodbpositron',
-    zoom_start=3,
-)
-df.apply(lambda row:folium.CircleMarker(location=[row["geo_lat"], row["geo_long"]]).add_to(map1), axis=1)
-map1.save('geotagger_test.html')
+# -----------------------------------------
+# TEST CASE:
+# -----------------------------------------
+# d = {'user.location': ['Ireland', 'London', 'Manchester', 'Wellingborough', 'sdfshghfhgfvd', 'London']}
+# df = pd.DataFrame(data=d)
+# print(df)
+
+# df[['geo_lat', 'geo_long']] = df['user.location'].apply(lambda x: get_geo_info(x))
+# print(df)
+
+# # drop NaNs
+# df = df.dropna(subset=['geo_lat', 'geo_long'], how='all')
+# print(df)
+# -----------------------------------------
+
+
+
+# -----------------------------------------
+# TEST CASE:
+# -----------------------------------------
+# map1 = folium.Map(
+#     location=[53.8, 4.5],
+#     tiles='cartodbpositron',
+#     zoom_start=3,
+# )
+# df.apply(lambda row:folium.CircleMarker(location=[row["geo_lat"], row["geo_long"]]).add_to(map1), axis=1)
+
+# # add in the quantities of tweets within a certain area
+# FastMarkerCluster(data=list(zip(df['geo_lat'].values, df['geo_long'].values))).add_to(map1)
+# folium.LayerControl().add_to(map1)
+
+# map1.save('geotagger_test.html')
+# -----------------------------------------
+
