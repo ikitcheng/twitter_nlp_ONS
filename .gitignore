@@ -1,5 +1,5 @@
 .DS_Store
 config.yaml
-.vs_code
+.vscode
 __pycache__
 twitter_nlp_ONS.egg-info
