@@ -18,9 +18,9 @@ import ast
 from nltk.stem import WordNetLemmatizer
 import nltk
 import string
-import botometer
+#import botometer
 import re
-import progressbar
+#import progressbar
 from textblob import TextBlob
 from argparse import ArgumentParser
 
@@ -35,28 +35,28 @@ dict_of_hashtags = {"eu": ["europeanunion"],
 
 
 # headers for datasets/Basic_Headers
-# headers = ["created_at", "id", "text", "entities", "source", 
-#                            "user.id", "user.screen_name", "user.location", 
-#                            "user.followers_count", "user.friends_count", 
-#                            "user.verified", "user.statuses_count", "geo", "coordinates",
-#                            "place_name", "user_location2", "retweet_count", 
-#                            "tweet_favorite_count", "tweet_favorited", "tweet_retweeted"]
+headers = ["created_at", "id", "text", "entities", "source", 
+                            "user.id", "user.screen_name", "user.location", 
+                            "user.followers_count", "user.friends_count", 
+                            "user.verified", "user.statuses_count", "geo", "coordinates",
+                            "place_name", "user_location2", "retweet_count", 
+                            "tweet_favorite_count", "tweet_favorited", "tweet_retweeted"]
 
 
 # headers for datasets/All_Headers
-headers = ["created_at", "id", "text", "entities", "source", 
-            "user", "user.id", "user.screen_name", "user.location", 
-            "user.followers_count", "user.friends_count", "user.created_at",
-            "user.favourites_count", "user.statuses_count", "user.verified",
-            "user.statuses_count", "geo", "coordinates", "place", "retweeted_status.text", 
-            "retweet_count", "tweet_favorite_count", "tweet_retweeted", "tweet_favorited"]
+#headers = ["created_at", "id", "text", "entities", "source", 
+ #           "user", "user.id", "user.screen_name", "user.location", 
+  #          "user.followers_count", "user.friends_count", "user.created_at",
+   #         "user.favourites_count", "user.statuses_count", "user.verified",
+    #        "user.statuses_count", "geo", "coordinates", "place", "retweeted_status.text", 
+     #       "retweet_count", "tweet_favorite_count", "tweet_retweeted", "tweet_favorited"]
 
 
 class DataAnalyser:
     
     def __init__(self, file_name, sheet_name = None):
         self.file_name = file_name
-        self.word_cloud_file = file_name.split('scrape_data_')[1].strip('.csv').replace('/', '-')
+        #self.word_cloud_file = file_name.split('scrape_data_')[1].strip('.csv').replace('/', '-')
         if self.file_name.endswith(".xlsx"):  
             self.sheet_name = sheet_name
             self.df = pd.read_excel(io=self.file_name, sheet_name=self.sheet_name)
@@ -222,13 +222,22 @@ class DataAnalyser:
         tweet_col = self.df.entities.values
         list_of_hashtags = []
         
-        for tweet_info in tweet_col:
+        for i, tweet_info in enumerate(tweet_col):
             hashtags_for_that_row = []
-            for dic in ast.literal_eval(tweet_info)["hashtags"]:
-                hashtags_for_that_row.append(dic["text"].lower())
-            list_of_hashtags.append(hashtags_for_that_row)
+            #print(i)
+            try:
+                #print("hi")
+                for dic in ast.literal_eval(tweet_info[0])["hashtags"]:
+                    hashtags_for_that_row.append(dic["text"].lower())
+                list_of_hashtags.append(hashtags_for_that_row)
+            except SyntaxError:
+                #print("hi2")
+                for dic in ast.literal_eval(tweet_info)["hashtags"]:
+                    hashtags_for_that_row.append(dic["text"].lower())
+                list_of_hashtags.append(hashtags_for_that_row)
+
         
-        self.df['Hashtags']=pd.Series(np.asarray(list_of_hashtags))
+        self.df['Hashtags']=list_of_hashtags
             
 
     def _stem(self, dictionary):
@@ -355,9 +364,9 @@ args = parser.parse_args()
 filename = args.filename
 
 # x = DataAnalyser("../Scraper/datasets/All_Headers/scrape_data_2020-01-29-2020-01-30/brexit.csv")
-analyser = DataAnalyser(filename)
-print(analyser.df.head())
-print(analyser.df['user.location'])
+#analyser = DataAnalyser(filename)
+#print(analyser.df.head())
+#print(analyser.df['user.location'])
 # analyser.hashtag_freq(['Brexit ','brexit ', 'BREXIT ', ' Brexit',' brexit', ' BREXIT','Brexit','brexit', 'BREXIT'], wordcloud=True)
         
 #x = DataAnalyser("NewsaboutbrexitonTwitter.xlsx", "Table1-1")
