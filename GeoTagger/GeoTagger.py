@@ -75,7 +75,7 @@ def plot_and_save_map(df, filename, precise_geo=True):
     """
     # TODO: the next 2 lines will eventually be deleted - here for testing purposes
     # test first N values in scraped data
-    N = 100
+    N = 2000
     lat_long_df = df.head(N)
 
     # cocatenate latitude and longitude columns onto df
@@ -127,7 +127,7 @@ with open(root_dir_data + "headers.csv", newline='') as f:
 
 # process the data
 hashtags_df = read_and_merge_scraped_data(dataset, headers)
-save_map_path = "BrexitEvolutionMaps/scape_data_test_with_precise_geo_n=2000.html"
+save_map_path = "BrexitEvolutionMaps/geotag_2020-01-29-2020-01-30-n=2000.html"
 # save_map_path = "BrexitEvolutionMaps/scape_data_test_with_precise_geo_n=10.html"
 plot_and_save_map(hashtags_df, save_map_path)
 
