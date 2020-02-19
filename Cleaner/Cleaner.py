@@ -9,7 +9,7 @@ from argparse import ArgumentParser
 
 class Cleaner:
 
-    def __init__(self, filename, headers, sheet_name=None):
+    def __init__(self, filename, headers):
         _, fileExtension = os.path.splitext(filename)
         if fileExtension != '.csv':
             raise TypeError("Data file provided of incorrect type, \n" +
@@ -71,7 +71,7 @@ class Cleaner:
 
     def clean_tweet(self, tweet):
         """
-        Input: tweet (originial)
+        Input: tweet (original)
         output: tweet without RT tag, username and urls, punctuation
         """
 
