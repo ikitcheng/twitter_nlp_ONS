@@ -1,0 +1,6 @@
+{
+    "eu": ["europeanunion"],
+    "euref": ["eureferendum", "eurefresults", "eurefresult"],
+    "ukref": ["ukreferendum", "ukeureferendum"],
+    "ukexit": ["ukexitseu"]
+}

@@ -1,0 +1,393 @@
+import numpy as np
+import pandas as pd
+import datetime
+from scraper import scrapeTimeline as st
+
+class featureExtractor:
+   
+    def __init__(self, usernames):
+        """
+        usernames: list of twitter usernames to be scraped
+        """
+        self.usernames = usernames
+
+
+    def get_user_numerical_features(self, data):
+        """
+
+        Parameters
+        ----------
+        data : list
+            A list of dictionaries, each dictionary is a Tweet object. 
+
+        Returns
+        -------
+        nFollowers : int
+            Number of followers.
+        nFollowings : int
+            Number of followings. 
+        FollowersToFollowing : float
+            Number of followers / Number of followings.
+        nLists : int
+            Number of public lists the user is a member of.
+        nFavs : int
+            Number of tweets the user has liked.
+        nPosts : int
+            Total number of posts.
+
+        """
+        user = data[0]['user']
+        nFollowers = user['followers_count']
+        nFollowings = user['friends_count']
+        try:
+            FollowersToFollowing = nFollowers / nFollowings
+        except ZeroDivisionError:
+            FollowersToFollowing = np.nan
+
+        nLists = user['listed_count']
+        nFavs = user['favourites_count']  
+        nPosts = user['statuses_count']  
+        return (nFollowers, nFollowings, FollowersToFollowing, nLists,
+                nFavs, nPosts)
+
+
+    def get_user_binary_features(self, data):
+        """
+
+        Parameters
+        ----------
+        data : list
+            A list of dictionaries, each dictionary is a Tweet object. 
+
+        Returns
+        -------
+        geo_enabled : bool
+            Whether the user enabled geo-tagging.
+        location_provided : bool
+            Whether the user provided a location associated with the post.
+        url_provided : bool
+            Whether the user has an URL in association with their profile.
+        description_provided : bool
+            Whether the profile has a description.
+        verified : bool
+            Whether the account is verified.
+
+        """
+        user = data[0]['user']
+        geo_enabled = user['geo_enabled']
+        location_provided = len(user['location']) is not 0
+        url_provided = user['url'] is not None
+        description_provided = len(data[0]['user']['description']) is not 0
+        verified = user['verified']
+        return (geo_enabled, location_provided, url_provided, description_provided,
+                verified)
+
+
+    # Popularity of post feature
+    # retweeted_status attribute contains representation of the ORIGINAL Tweet
+    # N.B. each post by the user can be an original tweet, a retweet or a reply
+    def fav(self, data, P):
+        """
+        
+        Parameters
+        ----------
+        data : list
+            A list of dictionaries, each dictionary is a Tweet object.
+        P : string
+            Type of post: 'tweets', 'retweets' or 'replies'
+
+        Returns
+        -------
+        int
+            Number of users favoring the post P of the user.
+
+        """
+
+        fav_count_tweets = []
+        fav_count_retweets = []
+        fav_count_replies = []
+
+        for i in range(len(data)):  # for each post
+            if (isinstance(data[i]['in_reply_to_status_id'], int)):  # a reply
+                fav_count_replies.append(data[i]['favorite_count'])
+
+            elif ('retweeted_status' in data[i].keys() or data[i]['is_quote_status']):  # a retweet
+                fav_count_retweets.append(data[i]['favorite_count'])
+
+            else:  # an original tweet
+                fav_count_tweets.append(data[i]['favorite_count'])
+
+        if P == 'replies':
+            return sum(fav_count_replies), len(fav_count_replies)
+
+        elif P == 'retweets':
+            return sum(fav_count_retweets), len(fav_count_retweets)
+
+        elif P == 'tweets':
+            return sum(fav_count_tweets), len(fav_count_tweets)
+
+
+    def ret(self, data, P):
+        """
+        Parameters
+        ----------
+        data : list
+            A list of dictionaries, each dictionary is a Tweet object.
+        P : string
+            Type of post: 'tweets', 'retweets' or 'replies'
+
+        Returns
+        -------
+        int
+            Number of users retweeting the post of the user.
+
+        """
+
+        ret_count_tweets = []
+        ret_count_retweets = []
+        ret_count_replies = []
+
+        for i in range(len(data)):  # for each post
+            if (isinstance(data[i]['in_reply_to_status_id'], int)):  # a reply
+                ret_count_replies.append(data[i]['retweet_count'])
+
+            elif ('retweeted_status' in data[i].keys() or data[i]['is_quote_status']):  # post is a retweet
+                ret_count_retweets.append(data[i]['retweet_count'])
+
+            else:  # post is an original tweet
+                ret_count_tweets.append(data[i]['retweet_count'])
+
+        if P == 'replies':
+            return sum(ret_count_replies), len(ret_count_replies)
+
+        elif P == 'retweets':
+            return sum(ret_count_retweets), len(ret_count_retweets)
+
+        elif P == 'tweets':
+            return sum(ret_count_tweets), len(ret_count_tweets)
+
+
+    def pop_fav(self, data, P, nFollowings):
+        """
+
+        Parameters
+        ----------
+        data : list
+            A list of dictionaries, each dictionary is a Tweet object.
+        P : string
+            Type of post: 'tweets', 'retweets' or 'replies'
+        nFollowings : int
+            Number of followings.
+
+        Returns
+        -------
+        float
+            Popularity score of the user's posts based on likes.
+
+        """
+
+        s, n = self.fav(data, P)
+        try:
+            Likes_popularity_score = s / n / nFollowings
+        except ZeroDivisionError:
+            #print(f'There are no {P} in the data...')
+            return np.nan
+        return Likes_popularity_score
+
+
+    def pop_ret(self, data, P, nFollowings):
+        """
+
+        Parameters
+        ----------
+        data : list
+            A list of dictionaries, each dictionary is a Tweet object.
+        P : string
+            Type of post: 'tweets', 'retweets' or 'replies'
+        nFollowings : int
+            Number of followings.
+
+        Returns
+        -------
+        float
+            Popularity score of the user's posts based on retweets.
+
+        """
+
+        s, n = self.ret(data, P)
+        try:
+            Retweets_popularity_score = s / n / nFollowings
+        except ZeroDivisionError:
+            #print(f'There are no {P} in the data...')
+            return np.nan
+        return Retweets_popularity_score
+
+
+    # Statistical features
+    def get_statistical_features(self, data):
+        """
+
+        Parameters
+        ----------
+        data : list
+            A list of dictionaries, each dictionary is a Tweet object. 
+            https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
+
+        Returns
+        -------
+        nPostMention : int
+            Number of posts that contain a mention to another user.
+        nPostQuote : int
+            Number of quoted tweets (i.e. retweets with a comment).
+        nPostPlace : int
+            Number of posts that were posted in association with a place 
+            (geo-tagged tweet).
+        Tavg : float
+            Average time interval (in seconds) between tweets.
+
+        """
+
+        nPostMention = 0
+        nPostQuote = 0
+        nPostPlace = 0
+
+        for i in range(len(data)):  # for each post
+            if data[i]['entities']['user_mentions']:
+                nPostMention += 1
+        
+            if data[i]['is_quote_status']:
+                nPostQuote += 1
+                
+            if data[i]['place']:
+                nPostPlace += 1
+
+        t1 = data[len(data) - 1]['created_at']
+        t2 = data[0]['created_at']
+        datetime1 = datetime.datetime.strptime(t1, '%a %b %d %H:%M:%S %z %Y')
+        datetime2 = datetime.datetime.strptime(t2, '%a %b %d %H:%M:%S %z %Y')
+
+        Tinterval = (datetime2 - datetime1).total_seconds()
+        Tavg = Tinterval / len(data)
+        if Tavg == 0:
+            Tavg = np.nan
+
+        return (nPostMention, nPostQuote,
+                nPostPlace, Tavg)
+
+
+    def extract_features(self, N):
+        """
+        
+        Parameters
+        ----------
+        users : list
+            A list of Twitter usernames.
+        N : int
+            Number of most recent posts of each user.
+
+        Returns
+        -------
+        Dataframe of features. Each row is a user, and each column is a feature. 
+
+        """
+        users_data_dict = {}
+
+        for user in self.usernames:
+
+            print(f'\nScraping: {user}')
+            data = st.scrape_user_timeline(user, N)
+            if len(data) == 0:
+                #print('No posts found.')
+                continue
+            elif (isinstance(data, dict)) and ('errors' in data.keys()):
+                #print('User does not exist.')
+                continue
+            elif (isinstance(data, dict)) and ('error' in data.keys()):
+                #print('Account suspended.')
+                continue
+            # user features
+            nFollowers, nFollowings, FollowersToFollowing, nLists, nFavs, nPosts = self.get_user_numerical_features(
+                data)
+            geo, location, url, description, verified = self.get_user_binary_features(
+                data)
+
+            # tweet features
+            fav_tweets = self.fav(data, 'tweets')
+            fav_retweets = self.fav(data, 'retweets')
+            fav_replies = self.fav(data, 'replies')
+
+            ret_tweets = self.ret(data, 'tweets')
+            ret_retweets = self.ret(data, 'retweets')
+            ret_replies = self.ret(data, 'replies')
+
+            pop_fav_tweets = self.pop_fav(data, 'tweets', nFollowings)
+            pop_fav_retweets = self.pop_fav(data, 'retweets', nFollowings)
+            pop_fav_replies = self.pop_fav(data, 'replies', nFollowings)
+
+            pop_ret_tweets = self.pop_ret(data, 'tweets', nFollowings)
+            pop_ret_retweets = self.pop_ret(data, 'retweets', nFollowings)
+            pop_ret_replies = self.pop_ret(data, 'replies', nFollowings)
+
+            # other features
+            nPostMention, nPostQuote, nPostPlace, Tavg = self.get_statistical_features(
+                data)
+            
+            users_data_dict[user] = [nFollowers,
+                                    nFollowings,
+                                    FollowersToFollowing,
+                                    nLists,
+                                    nFavs,
+                                    nPosts,
+                                    geo,
+                                    location,
+                                    url,
+                                    description,
+                                    verified,
+                                    fav_tweets[0],
+                                    fav_retweets[0],
+                                    fav_replies[0],
+                                    ret_tweets[0],
+                                    ret_retweets[0],
+                                    ret_replies[0],
+                                    pop_fav_tweets,
+                                    pop_fav_retweets,
+                                    pop_fav_replies,
+                                    pop_ret_tweets,
+                                    pop_ret_retweets,
+                                    pop_ret_replies,
+                                    nPostMention,
+                                    nPostQuote,
+                                    nPostPlace,
+                                    Tavg]
+        
+        df = pd.DataFrame.from_dict(users_data_dict, orient='index')
+        df.columns = ['nFollowers',
+                    'nFollowings',
+                    'FollowersToFollowing',
+                    'nLists',
+                    'nFavs',
+                    'nPosts',
+                    'geo',
+                    'location',
+                    'url',
+                    'description',
+                    'verified',
+                    'fav_tweets',
+                    'fav_retweets',
+                    'fav_replies',
+                    'ret_tweets',
+                    'ret_retweets',
+                    'ret_replies',
+                    'pop_fav_tweets',
+                    'pop_fav_retweets',
+                    'pop_fav_replies',
+                    'pop_ret_tweets',
+                    'pop_ret_retweets',
+                    'pop_ret_replies',
+                    'nPostMention',
+                    'nPostQuote',
+                    'nPostPlace',
+                    'Tavg']
+                                                    
+        df.to_csv('features/user_features.csv')
+        return df
