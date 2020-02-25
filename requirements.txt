@@ -1,0 +1,12 @@
+numpy
+matplotlib
+pandas
+nltk
+textblob
+yaml
+requests
+tweepy
+ast
+tarfile
+geopy
+folium
