@@ -10,7 +10,8 @@ import requests
 import datetime
 import yaml
 import progressbar
-
+from bs4 import BeautifulSoup as soup
+import unicodedata
 
 def scrape_user_timeline(user, N):
     """
@@ -118,13 +119,22 @@ def get_user_binary_features(data):
 
     """
     user = data[0]['user']
-    geo_enabled = user['geo_enabled']
-    location_provided = len(user['location']) is not 0
-    url_provided = user['url'] is not None
-    description_provided = len(data[0]['user']['description']) is not 0
-    verified = user['verified']
+    geo_enabled = int(user['geo_enabled'])
+    location_provided = int(len(user['location']) is not 0)
+    url_provided = int(user['url'] is not None)
+    description_provided = int(len(data[0]['user']['description']) is not 0)
+    verified = int(user['verified'])
+    bot_in_name_position = int(data[0]['user']['screen_name'].lower().find('bot'))
+    if bot_in_name_position == -1:
+        bot_in_name = 0
+    else: bot_in_name = 1
+
+    bot_in_des_position = int(data[0]['user']['description'].lower().find('bot'))
+    if bot_in_des_position == -1:
+        bot_in_des = 0
+    else: bot_in_des = 1
     return (geo_enabled, location_provided, url_provided, description_provided,
-            verified)
+            verified, bot_in_name, bot_in_des)
 
 # In[]:
 # Popularity of post feature
@@ -320,11 +330,46 @@ def get_statistical_features(data):
     Tavg = Tinterval / len(data)
     if Tavg == 0:
         Tavg = np.nan
+      
+    # Twitter launch time
+    t1 = 'Sat Jul 15 00:00:00 +0000 2006'
+    datetime1 = datetime.datetime.strptime(t1, '%a %b %d %H:%M:%S %z %Y')
+    t2 = data[0]['user']['created_at']
+    datetime2 = datetime.datetime.strptime(t2, '%a %b %d %H:%M:%S %z %Y')
+    age = (datetime2 - datetime1).total_seconds()
+    
+    username = data[0]['user']['screen_name']
+    screen_name_len = (len(data[0]['user']['screen_name']))
 
     return (nPostMention, nPostQuote,
-            nPostPlace, Tavg)
+            nPostPlace, Tavg, age, screen_name_len)
 
+def strip_html(tweet):
+    tweet = soup(tweet, 'html.parser').text
+    tweet = unicodedata.normalize("NFKD", tweet)
+    # return ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", tweet).split()) 
+    return tweet
+
+def get_source_frequency_mapping(data):
+    userdata_df = pd.DataFrame(data, index=range(len(data)))
+    counts = {}
+    if 'source' in userdata_df.columns:
+        userdata_df['source_without_html'] = userdata_df['source'].apply(lambda x: strip_html(x))
+        counts = userdata_df['source_without_html'].value_counts().to_dict()
+    return counts
 # In[]:
+def check_invalid_user(data):
+    if len(data) == 0:
+        print('No posts found.')
+        return True
+    elif (isinstance(data, dict)) and ('errors' in data.keys()):
+        print('User does not exist.')
+        return True
+    elif (isinstance(data, dict)) and ('error' in data.keys()):
+        print('Account suspended.')
+        return True
+    
+        
 def main(users, N):
     """
     
@@ -344,25 +389,26 @@ def main(users, N):
 
     bar = progressbar.ProgressBar(max_value=len(users))
     counter = 0
+    
+    username_source_df = pd.DataFrame(columns=['username', 'source_freq_map'])  # source_freq_mapping
+    
     for user in users:
         counter += 1
         bar.update(counter)
 
         #print(f'\nScraping: {user}')
         data = scrape_user_timeline(user, N)
-        if len(data) == 0:
-            #print('No posts found.')
+        if check_invalid_user(data):
             continue
-        elif (isinstance(data, dict)) and ('errors' in data.keys()):
-            #print('User does not exist.')
-            continue
-        elif (isinstance(data, dict)) and ('error' in data.keys()):
-            #print('Account suspended.')
-            continue
+        username = data[0]['user']['screen_name']
+        
+        counts = get_source_frequency_mapping(data)
+        username_source_df = username_source_df.append({'username' : username , 'source_freq_map' : counts}, ignore_index=True)
+        
         # user features
         nFollowers, nFollowings, FollowersToFollowing, nLists, nFavs, nPosts = get_user_numerical_features(
             data)
-        geo, location, url, description, verified = get_user_binary_features(
+        geo, location, url, description, verified, bot_in_name, bot_in_des = get_user_binary_features(
             data)
 
         # tweet features
@@ -383,10 +429,10 @@ def main(users, N):
         pop_ret_replies = pop_ret(data, 'replies', nFollowings)
 
         # other features
-        nPostMention, nPostQuote, nPostPlace, Tavg = get_statistical_features(
+        nPostMention, nPostQuote, nPostPlace, Tavg, age, screen_name_len = get_statistical_features(
             data)
         
-        users_data_dict[user] = [nFollowers,
+        users_data_dict[username] = [nFollowers,
                                    nFollowings,
                                    FollowersToFollowing,
                                    nLists,
@@ -397,6 +443,8 @@ def main(users, N):
                                    url,
                                    description,
                                    verified,
+                                   #bot_in_name, 
+                                   #bot_in_des,
                                    fav_tweets[0],
                                    fav_retweets[0],
                                    fav_replies[0],
@@ -412,7 +460,9 @@ def main(users, N):
                                    nPostMention,
                                    nPostQuote,
                                    nPostPlace,
-                                   Tavg]
+                                   Tavg,]
+                                   #age,
+                                   #screen_name_len]
     
     df = pd.DataFrame.from_dict(users_data_dict, orient='index')
     
@@ -428,6 +478,8 @@ def main(users, N):
                     'url',
                     'description',
                     'verified',
+                    #'bot_in_name',
+                    #'bot_in_des',
                     'fav_tweets',
                     'fav_retweets',
                     'fav_replies',
@@ -443,43 +495,45 @@ def main(users, N):
                     'nPostMention',
                     'nPostQuote',
                     'nPostPlace',
-                    'Tavg']
+                    'Tavg',]
+                    #'age',
+                    #'screen_name_len']
     except ValueError:
         df.columns = []
+        
     df.index.name = 'username'                                            
     df.to_csv('user_features.csv')
-    return df
+    username_source_df.to_csv('username_source_freq_mapping1.csv')
+    return df, username_source_df
 
 # In[]:
 if __name__ == '__main__':
     from get_usernames import get_usernames
     N = 200  # number of posts to scrape from user timeline
     #users = get_usernames('../Datasets/user_classification/ind_vs_bot/brexitday/brexitday.csv')
-    #users = ['jintyrose']
-    #df = main(users, N)
+    users = ['tinycarebot','EmojiAquarium','tiny_star_field','I_Find_Planets',
+             'thinkpiecebot','deepquestionbot','softlandscapes','pixelsorter',
+             'grow_slow','year_progress']
+    #ground_truth_df = pd.read_csv('../../Datasets/user_classification/ind_vs_bot/dataset_human_bot_ground_truth.csv')
+    #users = ground_truth_df.username
+    
+    df, username_source_df = main(users, N)
 # In[]:
     ### finding the sources of tweets
-    from bs4 import BeautifulSoup as soup
-    df = pd.read_csv('../../Datasets/user_classification/ind_vs_bot/dataset1/user_features_labels.csv', index_col=0) 
-    users = df.index
-    sources = []
-    bar = progressbar.ProgressBar(max_value=len(users))
-    counter = 0
-    for user in users:
-        counter += 1
-        bar.update(counter)
-        data = scrape_user_timeline(user, N)
-        if len(data) == 0:
-            #print('No posts found.')
-            continue
-        elif (isinstance(data, dict)) and ('errors' in data.keys()):
-            #print('User does not exist.')
-            continue
-        elif (isinstance(data, dict)) and ('error' in data.keys()):
-            #print('Account suspended.')
-            continue
-        source = [soup(data[i]['source'], 'html.parser').text for i in range(len(data))]
-        sources.append(np.unique(source))
+    # from bs4 import BeautifulSoup as soup
+    # df = pd.read_csv('../../Datasets/user_classification/ind_vs_bot/dataset1/user_features_labels.csv', index_col=0) 
+    # users = df.index
+    # sources = []
+    # bar = progressbar.ProgressBar(max_value=len(users))
+    # counter = 0
+    # for user in users:
+    #     counter += 1
+    #     bar.update(counter)
+    #     data = scrape_user_timeline(user, N)
+    #     if check_invalid_user(data):
+    #         continue
+    #     source = [soup(data[i]['source'], 'html.parser').text for i in range(len(data))]
+    #     sources.append(np.unique(source))
         
     # clean tweet function
     #def clean_tweet(tweet):

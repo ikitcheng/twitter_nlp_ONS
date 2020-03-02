@@ -29,7 +29,7 @@ def replaceNans(df, strategy='median'):
     print(f'Replacing Nans with {strategy}.')
     imputer = SimpleImputer(missing_values=np.nan, strategy=strategy)
     for i, col in enumerate(df.columns):
-        if len(df[col].unique()) == 2: # categorical (binary) data
+        if df[col].values.any() == bool: # categorical (binary) data
             continue
         else:
             df[[col]] = imputer.fit_transform(df[[col]])
