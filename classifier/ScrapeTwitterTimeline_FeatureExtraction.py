@@ -9,7 +9,6 @@ import pandas as pd
 import requests
 import datetime
 import yaml
-import progressbar
 
 
 def scrape_user_timeline(user, N):
@@ -342,11 +341,9 @@ def main(users, N):
     """
     users_data_dict = {}
 
-    bar = progressbar.ProgressBar(max_value=len(users))
     counter = 0
     for user in users:
         counter += 1
-        bar.update(counter)
 
         #print(f'\nScraping: {user}')
         data = scrape_user_timeline(user, N)
@@ -452,34 +449,31 @@ def main(users, N):
 
 # In[]:
 if __name__ == '__main__':
-    from get_usernames import get_usernames
+    # from get_usernames import get_usernames
     N = 200  # number of posts to scrape from user timeline
     #users = get_usernames('../Datasets/user_classification/ind_vs_bot/brexitday/brexitday.csv')
-    #users = ['jintyrose']
-    #df = main(users, N)
+    # users = ['jintyrose']
+    # df = main(users, N)
 # In[]:
     ### finding the sources of tweets
     from bs4 import BeautifulSoup as soup
-    df = pd.read_csv('../../Datasets/user_classification/ind_vs_bot/dataset1/user_features_labels.csv', index_col=0) 
-    users = df.index
-    sources = []
-    bar = progressbar.ProgressBar(max_value=len(users))
-    counter = 0
-    for user in users:
-        counter += 1
-        bar.update(counter)
-        data = scrape_user_timeline(user, N)
-        if len(data) == 0:
-            #print('No posts found.')
-            continue
-        elif (isinstance(data, dict)) and ('errors' in data.keys()):
-            #print('User does not exist.')
-            continue
-        elif (isinstance(data, dict)) and ('error' in data.keys()):
-            #print('Account suspended.')
-            continue
-        source = [soup(data[i]['source'], 'html.parser').text for i in range(len(data))]
-        sources.append(np.unique(source))
+    df = pd.read_csv('user_features_labels_noNan.csv', index_col=0) 
+    print(df.head())
+    # users = df.index
+    # sources = []
+    # for user in users:
+    #     data = scrape_user_timeline(user, N)
+    #     if len(data) == 0:
+    #         #print('No posts found.')
+    #         continue
+    #     elif (isinstance(data, dict)) and ('errors' in data.keys()):
+    #         #print('User does not exist.')
+    #         continue
+    #     elif (isinstance(data, dict)) and ('error' in data.keys()):
+    #         #print('Account suspended.')
+    #         continue
+    #     source = [soup(data[i]['source'], 'html.parser').text for i in range(len(data))]
+    #     sources.append(np.unique(source))
         
     # clean tweet function
     #def clean_tweet(tweet):
