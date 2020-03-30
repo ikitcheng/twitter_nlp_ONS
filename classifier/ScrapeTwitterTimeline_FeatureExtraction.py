@@ -124,17 +124,17 @@ def get_user_binary_features(data):
     url_provided = int(user['url'] is not None)
     description_provided = int(len(data[0]['user']['description']) is not 0)
     verified = int(user['verified'])
-    bot_in_name_position = int(data[0]['user']['screen_name'].lower().find('bot'))
-    if bot_in_name_position == -1:
-        bot_in_name = 0
-    else: bot_in_name = 1
+    #bot_in_name_position = int(data[0]['user']['screen_name'].lower().find('bot'))
+    # if bot_in_name_position == -1:
+    #     bot_in_name = 0
+    # else: bot_in_name = 1
 
-    bot_in_des_position = int(data[0]['user']['description'].lower().find('bot'))
-    if bot_in_des_position == -1:
-        bot_in_des = 0
-    else: bot_in_des = 1
+    # bot_in_des_position = int(data[0]['user']['description'].lower().find('bot'))
+    # if bot_in_des_position == -1:
+    #     bot_in_des = 0
+    # else: bot_in_des = 1
     return (geo_enabled, location_provided, url_provided, description_provided,
-            verified, bot_in_name, bot_in_des)
+            verified)#, bot_in_name, bot_in_des)
 
 # In[]:
 # Popularity of post feature
@@ -401,6 +401,7 @@ def main(users, N):
         if check_invalid_user(data):
             continue
         username = data[0]['user']['screen_name']
+        userid = data[0]['user']['id']
         
         counts = get_source_frequency_mapping(data)
         username_source_df = username_source_df.append({'username' : username , 'source_freq_map' : counts}, ignore_index=True)
@@ -408,7 +409,7 @@ def main(users, N):
         # user features
         nFollowers, nFollowings, FollowersToFollowing, nLists, nFavs, nPosts = get_user_numerical_features(
             data)
-        geo, location, url, description, verified, bot_in_name, bot_in_des = get_user_binary_features(
+        geo, location, url, description, verified = get_user_binary_features(
             data)
 
         # tweet features
@@ -432,42 +433,42 @@ def main(users, N):
         nPostMention, nPostQuote, nPostPlace, Tavg, age, screen_name_len = get_statistical_features(
             data)
         
-        users_data_dict[username] = [nFollowers,
-                                   nFollowings,
-                                   FollowersToFollowing,
-                                   nLists,
-                                   nFavs,
-                                   nPosts,
-                                   geo,
-                                   location,
-                                   url,
-                                   description,
-                                   verified,
-                                   #bot_in_name, 
-                                   #bot_in_des,
-                                   fav_tweets[0],
-                                   fav_retweets[0],
-                                   fav_replies[0],
-                                   ret_tweets[0],
-                                   ret_retweets[0],
-                                   ret_replies[0],
-                                   pop_fav_tweets,
-                                   pop_fav_retweets,
-                                   pop_fav_replies,
-                                   pop_ret_tweets,
-                                   pop_ret_retweets,
-                                   pop_ret_replies,
-                                   nPostMention,
-                                   nPostQuote,
-                                   nPostPlace,
-                                   Tavg,]
-                                   #age,
-                                   #screen_name_len]
+        users_data_dict[username] = [userid,
+                                     nFollowers,
+                                    nFollowings,
+                                    FollowersToFollowing,
+                                    nLists,
+                                    nFavs,
+                                    nPosts,
+                                    geo,
+                                    location,
+                                    url,
+                                    description,
+                                    verified,
+                                    fav_tweets[0],
+                                    fav_retweets[0],
+                                    fav_replies[0],
+                                    ret_tweets[0],
+                                    ret_retweets[0],
+                                    ret_replies[0],
+                                    pop_fav_tweets,
+                                    pop_fav_retweets,
+                                    pop_fav_replies,
+                                    pop_ret_tweets,
+                                    pop_ret_retweets,
+                                    pop_ret_replies,
+                                    nPostMention,
+                                    nPostQuote,
+                                    nPostPlace,
+                                    Tavg,
+                                    age,
+                                    screen_name_len]
     
     df = pd.DataFrame.from_dict(users_data_dict, orient='index')
     
     try:
-        df.columns = ['nFollowers',
+        df.columns = ['userid',
+                      'nFollowers',
                     'nFollowings',
                     'FollowersToFollowing',
                     'nLists',
@@ -478,8 +479,6 @@ def main(users, N):
                     'url',
                     'description',
                     'verified',
-                    #'bot_in_name',
-                    #'bot_in_des',
                     'fav_tweets',
                     'fav_retweets',
                     'fav_replies',
@@ -495,9 +494,9 @@ def main(users, N):
                     'nPostMention',
                     'nPostQuote',
                     'nPostPlace',
-                    'Tavg',]
-                    #'age',
-                    #'screen_name_len']
+                    'Tavg',
+                    'age',
+                    'screen_name_len']
     except ValueError:
         df.columns = []
         
@@ -510,31 +509,15 @@ def main(users, N):
 if __name__ == '__main__':
     from get_usernames import get_usernames
     N = 200  # number of posts to scrape from user timeline
-    #users = get_usernames('../Datasets/user_classification/ind_vs_bot/brexitday/brexitday.csv')
-    users = ['tinycarebot','EmojiAquarium','tiny_star_field','I_Find_Planets',
-             'thinkpiecebot','deepquestionbot','softlandscapes','pixelsorter',
-             'grow_slow','year_progress']
+    users = get_usernames('../../Datasets/user_classification/ind_vs_bot/brexitday/brexitday.csv')
+    # users = ['tinycarebot','EmojiAquarium','tiny_star_field','I_Find_Planets',
+    #          'thinkpiecebot','deepquestionbot','softlandscapes','pixelsorter',
+    #          'grow_slow','year_progress']
     #ground_truth_df = pd.read_csv('../../Datasets/user_classification/ind_vs_bot/dataset_human_bot_ground_truth.csv')
     #users = ground_truth_df.username
     
     df, username_source_df = main(users, N)
 # In[]:
-    ### finding the sources of tweets
-    # from bs4 import BeautifulSoup as soup
-    # df = pd.read_csv('../../Datasets/user_classification/ind_vs_bot/dataset1/user_features_labels.csv', index_col=0) 
-    # users = df.index
-    # sources = []
-    # bar = progressbar.ProgressBar(max_value=len(users))
-    # counter = 0
-    # for user in users:
-    #     counter += 1
-    #     bar.update(counter)
-    #     data = scrape_user_timeline(user, N)
-    #     if check_invalid_user(data):
-    #         continue
-    #     source = [soup(data[i]['source'], 'html.parser').text for i in range(len(data))]
-    #     sources.append(np.unique(source))
-        
     # clean tweet function
     #def clean_tweet(tweet):
     #    return ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", tweet).split())       
