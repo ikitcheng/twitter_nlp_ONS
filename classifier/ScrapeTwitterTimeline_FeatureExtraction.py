@@ -387,14 +387,12 @@ def main(users, N):
     """
     users_data_dict = {}
 
-    bar = progressbar.ProgressBar(max_value=len(users))
     counter = 0
     
     username_source_df = pd.DataFrame(columns=['username', 'source_freq_map'])  # source_freq_mapping
     
     for user in users:
         counter += 1
-        bar.update(counter)
 
         #print(f'\nScraping: {user}')
         data = scrape_user_timeline(user, N)
@@ -507,7 +505,7 @@ def main(users, N):
 
 # In[]:
 if __name__ == '__main__':
-    from get_usernames import get_usernames
+    # from get_usernames import get_usernames
     N = 200  # number of posts to scrape from user timeline
     users = get_usernames('../../Datasets/user_classification/ind_vs_bot/brexitday/brexitday.csv')
     # users = ['tinycarebot','EmojiAquarium','tiny_star_field','I_Find_Planets',
