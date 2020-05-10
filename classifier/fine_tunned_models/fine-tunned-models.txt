@@ -1,0 +1,53 @@
+Fine-tuned classifiers:
+
+- human_vs_bot:
+
+XGBClassifier(base_score=0.5, booster='gbtree', colsample_bylevel=1,
+              colsample_bynode=1, colsample_bytree=0.981565812704725,
+              gamma=0.00038938292050716417, learning_rate=0.3276634677873652,
+              max_delta_step=0, max_depth=3, min_child_weight=4, missing=None,
+              n_estimators=121, n_jobs=1, nthread=None,
+              objective='binary:logistic', random_state=50, reg_alpha=0,
+              reg_lambda=1, scale_pos_weight=1, seed=None, silent=None,
+              subsample=0.6028265220878869, verbosity=1)
+
+Accuracy
+Baseline: 0.165 | Test: 0.981 | Train: 0.991 
+
+Recall
+Baseline: 1.0 | Test: 0.908 | Train: 0.952 
+
+Precision
+Baseline: 0.165 | Test: 0.975 | Train: 0.996 
+
+Roc
+Baseline: 0.5 | Test: 0.989 | Train: 0.999 
+
+F1score
+Baseline: 0.667 | Test: 0.94 | Train: 0.974 
+
+
+- human_vs_bot_vs_org (multiclass single label):
+
+Trained on google colab with gpu. 
+
+XGBClassifier(base_score=0.5, booster='gbtree', colsample_bylevel=1,
+              colsample_bynode=1, colsample_bytree=0.8191503433293237,
+              gamma=0.4602523544185941, learning_rate=0.1743262099980805,
+              max_delta_step=0, max_depth=4, min_child_weight=3, missing=None,
+              n_estimators=138, n_jobs=-1, nthread=None,
+              objective='multi:softprob', random_state=50, reg_alpha=0,
+              reg_lambda=1, scale_pos_weight=1, seed=None, silent=None,
+              subsample=0.795430930902363, tree_method='gpu_hist', verbosity=1)
+
+				precision    recall  f1-score   support
+
+           0      0.956     0.985     0.970      4276
+           1      0.973     0.897     0.934       848
+           2      0.917     0.843     0.878       826
+
+    accuracy                          0.953      5950
+   macro avg      0.949     0.908     0.927      5950
+weighted avg      0.953     0.953     0.952      5950
+
+

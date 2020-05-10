@@ -1,0 +1,5 @@
+- Create 'scraped_data', 'user_features', 'user_labels' folders in current directory
+- Open run.py and execute 
+	- Scraper FeatExt cell ---> output: saved in 'user_features'
+	- Cleaning feature df cell  ---> output: feature dataframe with no nans saved in 'user_features'
+	- Classify user cell ---> output: original scraped data + labels saved in 'user_labels'
