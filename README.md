@@ -1,25 +1,20 @@
-# twitter_nlp_ONS
-NLP tools to analyse twitter for different user groups and perform topic modelling 
+# Twitter NLP Project:
 
-# Tasks:
+This repo contains tools to pull data from Twitter and analyse tweets according to the metadata contained with them. We have put together tools which have enabled a pipeline to execute NLP sentiment analysis on the data obtained Twitter, as well as providing visualization amongst out findings, this includes user group classification, topic modelling & wordclouds.
 
-## JH:
-- Data preprocessing:
-  - cleaning hashtag lists
-  - ~~write script to format csv's that Nisha has generated into format that the preprocessing code can use for wordcloud generation~~
-  - find a list of English words to use for tweet filtering
-- Data analysis: 
-  - wordcloud related stuff for hashtags and tweets --> specifically do a wordcloud of the text of the tweets
- 
+## Breakdown of repository:
 
-## NL:
-- Data collection: 
-  - Write script to automatically scrape twitter data
-  - scrape Twitter data real-time from the past 7 days related to #Brexit
-  
-## MC:
-- Data preprocessing:
-  - extracting information from json and generate features for user classification. 
-  - cleaning tweet text
-- Data analysis:
-  - user classification 
+- Scraper:
+  - Scraper script is set up to automate the continuous pull of twitter data containing specified hashtags; limited to the last 7 days
+  - Scraper can be extended to pull tweets containing any tweet attribute
+  - User config file must be provided to authenticate against the Twitter API
+- Cleaner:
+  - Clean twitter metadata
+- FeX:
+  - Feature Extraction
+- WordCloudGen:
+  - Word Cloud Generator
+- Classifier:
+  - User Classification
+- GeoTagger
+  - Used to determine geo-spatial sentiment analysis / region based

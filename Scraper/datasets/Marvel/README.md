@@ -1,0 +1,27 @@
+## Hashtags collected:
+
+- marvel
+- marvelcomics
+- marvelstudios
+- marvelmovies
+- marveluniverse
+- marvelmemes
+- avengers
+- mcu
+- comics
+- avengersendgame
+- avengersinfinitywar
+- disneyplus
+- ironman
+- captainamerica
+- loki
+- peterparker
+- thor
+- hulk
+- infinitywar
+- blackwidow
+- blackpanther
+- wandavision
+- doctorstrange
+- shangchi
+- thefalconandthewintersoldier

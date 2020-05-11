@@ -1,4 +1,6 @@
 .DS_Store
 config.yaml
-figures/
-.vscode/
+.vscode
+__pycache__
+twitter_nlp_ONS.egg-info
+*.png

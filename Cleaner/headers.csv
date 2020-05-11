@@ -1,0 +1,1 @@
+created_at,id,text,entities,source,user,user.id,user.screen_name,user.location,user.followers_count,user.friends_count,user.created_at,user.favourites_count,user.statuses_count,user.verified,user.statuses_count,geo,coordinates,place,retweeted_status.text,retweet_count,tweet_favorite_count,tweet_retweeted,tweet_favorited
