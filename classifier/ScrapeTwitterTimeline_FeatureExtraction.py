@@ -174,10 +174,10 @@ def fav(data, P):
             fav_count_replies.append(data[i]['favorite_count'])
 
         # or data[i]['is_quote_status']):  # a retweet or quote
-        elif ('retweeted_status' in data[i].keys()):
+        elif ('retweeted_status' in data[i].keys()): # a retweet
             fav_count_retweets.append(data[i]['favorite_count'])
 
-        else:  # an original tweet
+        elif not data[i]['is_quote_status']: # not a quote, then it's an original tweet
             fav_count_tweets.append(data[i]['favorite_count'])
 
     if P == 'replies':
@@ -217,10 +217,10 @@ def ret(data, P):
 
         # or data[i]['is_quote_status']):  # post is a retweet -maybe should
         # include quoted retweets
-        elif ('retweeted_status' in data[i].keys()):
+        elif ('retweeted_status' in data[i].keys()): # a retweet 
             ret_count_retweets.append(data[i]['retweet_count'])
 
-        else:  # post is an original tweet
+        elif not data[i]['is_quote_status']:  # post not a quote so original tweet
             ret_count_tweets.append(data[i]['retweet_count'])
 
     if P == 'replies':
@@ -434,27 +434,7 @@ def check_invalid_user(data):
         return True
 
 
-def main(users, N, fname='user_features_0.csv'):
-    """
-
-    Parameters
-    ----------
-    users : list
-        A list of Twitter usernames.
-    N : int
-        Number of most recent posts of each user.
-    fname: str
-        Output filename.
-
-    Returns
-    -------
-    Dataframe of features. Each row is a user, and each column is a feature.
-
-    """
-
-    # username_source_df = pd.DataFrame(columns=['username',
-    # 'source_freq_map'])  # source_freq_mapping
-    start = time.time()
+def main_FeatureExtraction(data, i, fname='user_features_0.csv'):
     headers = ['username',
                'userid',
                'nFollowers',
@@ -492,7 +472,109 @@ def main(users, N, fname='user_features_0.csv'):
                'screen_name_len',
                'levenshtein_name_screen_name']
     df = pd.DataFrame(columns=headers)
+    
+    username = data[0]['user']['screen_name']
+    userid = data[0]['user']['id']
 
+    #counts = get_source_frequency_mapping(data)
+    #username_source_df = username_source_df.append({'username' : username , 'source_freq_map' : counts}, ignore_index=True)
+
+    # user features
+    nFollowers, nFollowings, FollowersToFollowing, nLists, nFavs, nPosts = get_user_numerical_features(
+        data)
+    geo, location, url, description, verified = get_user_binary_features(
+        data)
+
+    # tweet features
+    fav_tweets = fav(data, 'tweets')
+    fav_retweets = fav(data, 'retweets')
+    fav_replies = fav(data, 'replies')
+
+    ret_tweets = ret(data, 'tweets')
+    ret_retweets = ret(data, 'retweets')
+    ret_replies = ret(data, 'replies')
+
+    pop_fav_tweets = pop_fav(data, 'tweets', nFollowings)
+    pop_fav_retweets = pop_fav(data, 'retweets', nFollowings)
+    pop_fav_replies = pop_fav(data, 'replies', nFollowings)
+
+    pop_ret_tweets = pop_ret(data, 'tweets', nFollowings)
+    pop_ret_retweets = pop_ret(data, 'retweets', nFollowings)
+    pop_ret_replies = pop_ret(data, 'replies', nFollowings)
+
+    # other features
+    nPostMention, nPostQuote, nPostPlace,\
+        Tavg, Tavg_tweet, Tavg_ret, Tavg_quote, Tavg_reply, age,\
+        screen_name_len,\
+        levenshtein_name_screen_name = get_statistical_features(
+            data)
+
+    username_features = [username,
+                         userid,
+                         nFollowers,
+                         nFollowings,
+                         FollowersToFollowing,
+                         nLists,
+                         nFavs,
+                         nPosts,
+                         geo,
+                         location,
+                         url,
+                         description,
+                         verified,
+                         fav_tweets[0],
+                         fav_retweets[0],
+                         fav_replies[0],
+                         ret_tweets[0],
+                         ret_retweets[0],
+                         ret_replies[0],
+                         pop_fav_tweets,
+                         pop_fav_retweets,
+                         pop_fav_replies,
+                         pop_ret_tweets,
+                         pop_ret_retweets,
+                         pop_ret_replies,
+                         nPostMention,
+                         nPostQuote,
+                         nPostPlace,
+                         Tavg,
+                         Tavg_tweet,
+                         Tavg_ret,
+                         Tavg_quote,
+                         Tavg_reply,
+                         age,
+                         screen_name_len,
+                         levenshtein_name_screen_name]
+
+    row_df = pd.DataFrame([username_features], columns=headers)
+    df = pd.concat([row_df, df], ignore_index=True)
+    if i == 0:
+        row_df.to_csv(f'user_features/{fname}', mode='a', header=headers,
+                      index=False)
+    else:
+        row_df.to_csv(f'user_features/{fname}', mode='a', header=False,
+                      index=False)
+    return df
+
+def main(users, N, fname='user_features_0.csv'):
+    """
+
+    Parameters
+    ----------
+    users : list
+        A list of Twitter usernames.
+    N : int
+        Number of most recent posts of each user.
+    fname: str
+        Output filename.
+
+    Returns
+    -------
+    Dataframe of features. Each row is a user, and each column is a feature.
+
+    """
+    df = pd.DataFrame()
+    start = time.time()
     for i, user in enumerate(users):
         print()
         print(f'{i+1}/{len(users)}')
@@ -513,89 +595,9 @@ def main(users, N, fname='user_features_0.csv'):
         data = scrape_user_timeline(user, N)
         if check_invalid_user(data):
             continue
-        username = data[0]['user']['screen_name']
-        userid = data[0]['user']['id']
-
-        #counts = get_source_frequency_mapping(data)
-        #username_source_df = username_source_df.append({'username' : username , 'source_freq_map' : counts}, ignore_index=True)
-
-        # user features
-        nFollowers, nFollowings, FollowersToFollowing, nLists, nFavs, nPosts = get_user_numerical_features(
-            data)
-        geo, location, url, description, verified = get_user_binary_features(
-            data)
-
-        # tweet features
-        fav_tweets = fav(data, 'tweets')
-        fav_retweets = fav(data, 'retweets')
-        fav_replies = fav(data, 'replies')
-
-        ret_tweets = ret(data, 'tweets')
-        ret_retweets = ret(data, 'retweets')
-        ret_replies = ret(data, 'replies')
-
-        pop_fav_tweets = pop_fav(data, 'tweets', nFollowings)
-        pop_fav_retweets = pop_fav(data, 'retweets', nFollowings)
-        pop_fav_replies = pop_fav(data, 'replies', nFollowings)
-
-        pop_ret_tweets = pop_ret(data, 'tweets', nFollowings)
-        pop_ret_retweets = pop_ret(data, 'retweets', nFollowings)
-        pop_ret_replies = pop_ret(data, 'replies', nFollowings)
-
-        # other features
-        nPostMention, nPostQuote, nPostPlace,\
-            Tavg, Tavg_tweet, Tavg_ret, Tavg_quote, Tavg_reply, age,\
-            screen_name_len,\
-            levenshtein_name_screen_name = get_statistical_features(
-                data)
-
-        username_features = [username,
-                             userid,
-                             nFollowers,
-                             nFollowings,
-                             FollowersToFollowing,
-                             nLists,
-                             nFavs,
-                             nPosts,
-                             geo,
-                             location,
-                             url,
-                             description,
-                             verified,
-                             fav_tweets[0],
-                             fav_retweets[0],
-                             fav_replies[0],
-                             ret_tweets[0],
-                             ret_retweets[0],
-                             ret_replies[0],
-                             pop_fav_tweets,
-                             pop_fav_retweets,
-                             pop_fav_replies,
-                             pop_ret_tweets,
-                             pop_ret_retweets,
-                             pop_ret_replies,
-                             nPostMention,
-                             nPostQuote,
-                             nPostPlace,
-                             Tavg,
-                             Tavg_tweet,
-                             Tavg_ret,
-                             Tavg_quote,
-                             Tavg_reply,
-                             age,
-                             screen_name_len,
-                             levenshtein_name_screen_name]
-
-        row_df = pd.DataFrame([username_features], columns=headers)
+        row_df = main_FeatureExtraction(data,i,fname)
         df = pd.concat([row_df, df], ignore_index=True)
-        if i == 0:
-            row_df.to_csv(f'user_features/{fname}', mode='a', header=headers,
-                          index=False)
-        else:
-            row_df.to_csv(f'user_features/{fname}', mode='a', header=False,
-                          index=False)
     return df
-
 
 # In[]:
 if __name__ == '__main__':
@@ -620,7 +622,7 @@ if __name__ == '__main__':
         'tinycarebot']
 
     print('Scraping user timelines: ')
-
+    
     df_features = main(users, N)
 
     print('Complete!')

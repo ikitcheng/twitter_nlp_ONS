@@ -72,14 +72,13 @@ for i, file in enumerate(files):
     model = load_trained_model(
         'fine_tunned_models/xgb_classifier_human_bot_org_colab.pkl')
     pred = model.predict(df_features)
-    classifications = {'labels': pred}
-    df_classify = pd.DataFrame(classifications, columns=['labels'])
-    df_classify.index = df_features.index
+    df_classify = pd.DataFrame(pred, columns=['labels'])
+    df_classify['username'] = df_features.index
     print('Complete!')
     print(f'Time elapsed: {time.time()-start:.2f} s\n')
 
 ###########################################
 # MERGE LABELS TO SCRAPED DATA
 ###########################################
-    df_merge = pd.merge(df_classify, df, on='username')
-    df_merge.to_csv(f'user_labels/{file}')
+    df_merge = pd.merge(df, df_classify, on='username')
+    df_merge.to_csv(f'user_labels/{file}', index=False)
