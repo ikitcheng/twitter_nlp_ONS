@@ -2,7 +2,6 @@
 
 This repo contains tools to pull data from Twitter and analyse tweets according to the metadata contained with them. We have put together tools which have enabled a pipeline to execute NLP sentiment analysis on the data obtained Twitter, as well as providing visualization amongst out findings, this includes user group classification, topic modelling & wordclouds.
 
-
 ## Breakdown of repository:
 
 - Scraper:
